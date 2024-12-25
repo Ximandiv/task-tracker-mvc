@@ -5,4 +5,9 @@
 <div class="text-center">
     <h1 class="display-4">Welcome to Task Tracker or TTR!</h1>
     <p>Here, you can create your personal tasks and track them in real time!</p>
+
+    @if(ViewData["AuthError"] != null)
+    {
+        <span>@ViewData["AuthError"]</span>
+    }
 </div>

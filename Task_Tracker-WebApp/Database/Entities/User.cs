@@ -11,13 +11,13 @@ public class User
     public required string Username { get; set; }
 
     [Required]
-    [StringLength(50)]
+    [StringLength(200)]
     public required string Password { get; set; }
 
     [Required]
     [EmailAddress]
     public required string Email { get; set; }
 
-    public DateTime Created { get; set; }
-    public DateTime Updated { get; set; }
+    public DateTime Created { get; set; } = DateTime.Now;
+    public DateTime Updated { get; set; } = DateTime.Now;
 }

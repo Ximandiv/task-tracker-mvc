@@ -12,14 +12,18 @@ public class UserTask
     public required string Title { get; set; }
 
     [StringLength(50)]
-    public required string Description { get; set; }
+    public required string? Description { get; set; }
+
+    [StringLength(50)]
+    public required string Status { get; set; }
 
     [Required]
-    public DateTime CreatedDate { get; set; }
+    public DateTime CreatedDate { get; set; } = DateTime.Now;
 
     [Required]
-    public DateTime UpdatedDate { get; set; }
+    public DateTime UpdatedDate { get; set; } = DateTime.Now;
 
     [ForeignKey("UserId")]
+    public int UserId { get; set; }
     public User? User { get; set; }
 }

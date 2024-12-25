@@ -1,0 +1,55 @@
+﻿@model TaskViewModel
+@{
+    Layout = "_DashboardLayout";
+    ViewData["Title"] = Model == null ? "Create Task" : "Edit Task";
+    int? ModelId = Model is not null ? Model.Id : 0;
+}
+
+<div class="container mt-4">
+    <h2>@(Model == null ? "Create Task" : "Edit Task")</h2>
+    <form asp-action="SaveTask" method="post">
+        <input type="hidden" asp-for="Id"/>
+        <div class="mb-3">
+            <label asp-for="Title" class="form-label">Title</label>
+            <input 
+                type="text" 
+                asp-for="Title" 
+                class="form-control" 
+                placeholder="Enter task title" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea 
+                asp-for="Description" 
+                class="form-control" 
+                rows="4" 
+                placeholder="Enter task description"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Status" class="form-label">Status</label>
+            <select asp-for="Status" class="form-select">
+                <option value="">-- Select Status --</option>
+                <option value="To-Do">To-Do</option>
+                <option value="In-Progress">In-Progress</option>
+                <option value="Completed">Completed</option>
+            </select>
+            <span asp-validation-for="Status" class="text-danger"></span>
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">
+                @(Model == null ? "Create" : "Update")
+            </button>
+            <a asp-action="Dashboard" class="btn btn-secondary">Cancel</a>
+        </div>
+
+        @if (ViewData["InvalidModel"] != null)
+        {
+            <span class="alert-warning">@ViewData["InvalidModel"]</span>
+        }
+    </form>
+</div>

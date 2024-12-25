@@ -1,18 +1,33 @@
-﻿@{
+﻿@model LogInViewModel
+@{
     ViewData["Title"] = "Log-In";
 }
 <div class="login-container">
     <div class="form-container">
         <h2>Login</h2>
+
         @if (ViewData["SignInMessage"] != null)
         {
             <span>@ViewData["SignInMessage"]</span>
         }
+
         <form asp-action="LoginUser" asp-controller="Auth" method="post">
-            <input type="email" placeholder="Email" required />
-            <input type="password" placeholder="Password" required />
-            <button type="submit">Login</button>
+            <label asp-for="Email">Email</label>
+            <input type="email" placeholder="Email" asp-for="Email" required />
+            <span asp-validation-for="Email"></span>
+
+            <label asp-for="Password">Password</label>
+            <input type="password" placeholder="Password" asp-for="Password" required />
+            <span asp-validation-for="Password"></span>
+
+            <button type="submit">Log-In</button>
         </form>
+
+        @if (ViewData["ErrorLogin"] != null)
+        {
+            <span>@ViewData["ErrorLogin"]</span>
+        }
+
         <p>Don't have an account? <a asp-area="" asp-controller="Auth" asp-action="SignIn">Sign up</a></p>
     </div>
 </div>

@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Task_Tracker_WebApp.Models.View;
 
@@ -20,6 +22,13 @@ namespace Task_Tracker_WebApp.Controllers
 
         public IActionResult Privacy()
         {
+            return View();
+        }
+
+        [Authorize]
+        public IActionResult AuthorizedPrivacy()
+        {
+            ViewData["Username"] = User.FindFirstValue("username");
             return View();
         }
 
