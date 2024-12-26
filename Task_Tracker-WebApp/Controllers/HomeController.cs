@@ -17,6 +17,7 @@ namespace Task_Tracker_WebApp.Controllers
 
         public IActionResult Index()
         {
+            ViewData["AuthError"] = TempData["AuthError"] ?? null;
             return View();
         }
 

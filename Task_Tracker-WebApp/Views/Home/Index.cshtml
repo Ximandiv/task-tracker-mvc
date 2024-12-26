@@ -8,6 +8,8 @@
 
     @if(ViewData["AuthError"] != null)
     {
-        <span>@ViewData["AuthError"]</span>
+        <div class="justify-content-center text-center mt-4">
+            <span class="text-danger">@ViewData["AuthError"]</span>
+        </div>
     }
 </div>

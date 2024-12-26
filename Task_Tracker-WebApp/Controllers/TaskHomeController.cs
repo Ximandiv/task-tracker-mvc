@@ -95,6 +95,8 @@ namespace Task_Tracker_WebApp.Controllers
 
             ViewData["Username"] = userName;
             ViewData["ActualPage"] = pageNumber;
+            ViewData["SuccessOperation"] = TempData["SuccessOperation"] ?? null;
+            ViewData["DeleteError"] = TempData["DeleteError"] ?? null;
 
             return View(viewModelResult);
         }
@@ -112,7 +114,7 @@ namespace Task_Tracker_WebApp.Controllers
                     @$"User tried to get in dashboard with invalid auth values:
                         UserId: {userId}");
 
-                ViewData["AuthError"] = "Unauthorized access";
+                TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -126,7 +128,7 @@ namespace Task_Tracker_WebApp.Controllers
         public async Task<IActionResult> Create(UserTaskViewModel taskViewModel)
         {
             if (!ModelState.IsValid)
-                return RedirectToAction("Create", taskViewModel);
+                return View(taskViewModel);
 
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -136,7 +138,7 @@ namespace Task_Tracker_WebApp.Controllers
                     @$"User tried to get in dashboard with invalid auth values:
                         UserId: {userId}");
 
-                ViewData["AuthError"] = "Unauthorized access";
+                TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -159,7 +161,7 @@ namespace Task_Tracker_WebApp.Controllers
             if (isTaskTitleDuplicate)
             {
                 ViewData["GeneralError"] = "A Task with the same Title was found";
-                return RedirectToAction("Create", taskViewModel);
+                return View(taskViewModel);
             }
 
             var userTask = await add(taskViewModel.UserTask!, userId);
@@ -167,6 +169,7 @@ namespace Task_Tracker_WebApp.Controllers
             _cache.Set(CachePrefix.UserTask, $"{userId}_{userTask.Id}", userTask);
             _cache.Remove(CachePrefix.UserTaskList, $"{userId}");
 
+            TempData["SuccessOperation"] = "Task was successfully created";
             return RedirectToAction("Dashboard");
         }
 
@@ -183,7 +186,7 @@ namespace Task_Tracker_WebApp.Controllers
                     @$"User tried to get in dashboard with invalid auth values:
                         UserId: {userId}");
 
-                ViewData["AuthError"] = "Unauthorized access";
+                TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -196,7 +199,7 @@ namespace Task_Tracker_WebApp.Controllers
 
                 if (userTask == null)
                 {
-                    ViewData["DeleteError"] = "Task to delete was not found";
+                    TempData["DeleteError"] = "Task to edit was not found";
                     return RedirectToAction("Dashboard");
                 }
 
@@ -225,7 +228,7 @@ namespace Task_Tracker_WebApp.Controllers
         public async Task<IActionResult> Edit(UserTaskViewModel model)
         {
             if (!ModelState.IsValid)
-                return RedirectToAction("Edit", model);
+                return View(model);
 
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -235,7 +238,7 @@ namespace Task_Tracker_WebApp.Controllers
                     @$"User tried to get in dashboard with invalid auth values:
                         UserId: {userId}");
 
-                ViewData["AuthError"] = "Unauthorized access";
+                TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -248,11 +251,19 @@ namespace Task_Tracker_WebApp.Controllers
 
                 if (userTask == null)
                 {
-                    ViewData["DeleteError"] = "Task to delete was not found";
-                    return RedirectToAction("Edit", model);
+                    TempData["DeleteError"] = "Task to delete was not found";
+                    return RedirectToAction("Dashboard");
                 }
 
                 _cache.Set(CachePrefix.UserTask, $"{userId}_{model.UserTask!.Id}", userTask);
+            }
+
+            if(model.UserTask.Title == userTask!.Title
+                && model.UserTask.Description == userTask!.Description
+                && model.UserTask.Status == userTask!.Status)
+            {
+                ViewData["GeneralError"] = "Task was unchanged";
+                return View(model);
             }
 
             using (var transaction = await _taskContext.Database.BeginTransactionAsync())
@@ -280,6 +291,7 @@ namespace Task_Tracker_WebApp.Controllers
             _cache.Remove(CachePrefix.UserTaskList, userId.ToString());
             _cache.Remove(CachePrefix.UserTask, $"{userId}_{model.UserTask.Id}");
 
+            TempData["SuccessOperation"] = "Task was successfully edited";
             return RedirectToAction("Dashboard");
         }
 
@@ -295,7 +307,7 @@ namespace Task_Tracker_WebApp.Controllers
                     @$"User tried to get in dashboard with invalid auth values:
                         UserId: {userId}");
 
-                ViewData["AuthError"] = "Unauthorized access";
+                TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
@@ -308,8 +320,8 @@ namespace Task_Tracker_WebApp.Controllers
 
                 if (userTask == null)
                 {
-                    ViewData["DeleteError"] = "Task to delete was not found";
-                    return RedirectToAction("Dashboard");
+                    TempData["DeleteError"] = "Task to delete was not found";
+                    return View("Dashboard");
                 }
             }
 
@@ -333,6 +345,7 @@ namespace Task_Tracker_WebApp.Controllers
             _cache.Remove(CachePrefix.UserTaskList, userId.ToString());
             _cache.Remove(CachePrefix.UserTask, $"{userId}_{taskId}");
 
+            TempData["SuccessOperation"] = "Task was successfully removed";
             return RedirectToAction("Dashboard");
         }
 
