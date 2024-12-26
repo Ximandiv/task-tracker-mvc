@@ -1,51 +1,41 @@
-﻿@model List<TaskViewModel>
+﻿@model UserTaskListViewModel
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = "Dashboard";
 }
 
 <header>
-    <h1 class="text-xl-center">Welcome to your task list</h1>
-</header>
 
-<div class="container justify-content-center text-center pt-2">
-    <a asp-action="CreateOrEdit" class="btn btn-primary">Create</a>
-</div>
+    <h1 class="text-xl-center">Welcome to your task list</h1>
+
+</header>
 
 <hr>
 
 <main>
+
     <div class="container">
-        <div class="row g-4" id="tasks-container">
-            @foreach(var task in Model)
-            {
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">@task.Title</h5>
-                            <p class="card-text">@task.Description</p>
-                            <p>Status: <span class="badge bg-primary">@task.Status</span></p>
-                            <p>Created: @task.CreatedDate.ToString("yyyy-MM-dd")</p>
-                            <p>Updated: @task.UpdatedDate.ToString("yyyy-MM-dd")</p>
 
-                            <!-- Edit and Remove Buttons -->
-                            <div class="d-flex justify-content-between">
-                                <a asp-action="CreateOrEdit" asp-route-id="@task.Id" class="btn btn-warning btn-sm">
-                                    Edit
-                                </a>
-
-                                <form 
-                                    method="post" 
-                                    asp-action="Delete" asp-route-id="@task.Id"
-                                    id="remove-form"
-                                    onsubmit="confirm('Are you sure you want to delete this task?');">
-                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
+        <div class="justify-content-center text-center">
+            <a asp-action="Create" class="btn btn-success">Create Task</a>
         </div>
+
+        @if (ViewData["DeleteError"] != null)
+        {
+            <span class="text-danger mt-4" id="Error-Validation">@ViewData["DeleteError"]</span>
+        }
+
+        <partial name="Partial/_DashboardPagination" model="Model" />
+
+        <div class="row g-4" id="tasks-container">
+
+           @foreach(var task in Model.Tasks)
+           {
+                <partial name="Partial/_DashboardItems" model="task" />
+           }
+
+        </div>
+
     </div>
+
 </main>

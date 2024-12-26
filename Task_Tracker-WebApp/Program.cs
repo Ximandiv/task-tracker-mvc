@@ -11,7 +11,7 @@ builder.ConfigureJWT();
 
 builder.Services.AddMySqlContext(dbConnectionString);
 
-builder.Services.AddSingleton<JWTGenerator>();
+builder.Services.AddSingleton<TokenGenerator>();
 builder.Services.AddSingleton<MemoryCacheHandler>();
 
 builder.Services.AddControllersWithViews();

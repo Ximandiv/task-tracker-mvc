@@ -11,26 +11,65 @@ namespace Task_Tracker_WebApp.Controllers
     {
         private readonly ILogger<AuthController> _logger;
         private readonly TaskContext _taskContext;
-        private readonly JWTGenerator _jwtGenerator;
+        private readonly TokenGenerator _tokenGenerator;
+        private readonly CookieOptions _accessTokenOptions;
+        private readonly CookieOptions _rememberMeOptions;
+
+        private readonly int _accessTokenDuration = 1;
+        private readonly int _rememberMeDuration = 3;
 
         public AuthController(
             ILogger<AuthController> logger,
             TaskContext taskContext,
-            JWTGenerator jwtGenerator)
+            TokenGenerator tokenGenerator)
         {
             _logger = logger;
             _taskContext = taskContext;
-            _jwtGenerator = jwtGenerator;
+            _tokenGenerator = tokenGenerator;
+
+            _accessTokenOptions = new CookieOptions()
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddHours(_accessTokenDuration)
+            };
+            _rememberMeOptions = new CookieOptions()
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddMonths(_rememberMeDuration)
+            };
         }
 
-        public IActionResult Login()
+        [HttpGet]
+        public async Task<IActionResult> Login()
         {
+            if(Request.Cookies.TryGetValue("RememberMe", out var rememberMeToken))
+            {
+                var tokenRecord = await _taskContext.RememberMeTokens
+                    .Include(r => r.User)
+                    .FirstOrDefaultAsync(r => r.Token == rememberMeToken 
+                                        && r.Expiration > DateTime.UtcNow);
+
+                if(tokenRecord != null
+                    && tokenRecord.User != null)
+                {
+                    var jwtToken = _tokenGenerator.GenerateJWT(tokenRecord.User);
+
+                    Response.Cookies.Append("JWToken", jwtToken, _accessTokenOptions);
+
+                    return RedirectToAction("Dashboard", "TaskHome");
+                }
+            }
+
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> LogInUser(LogInViewModel userLogIn)
+        public async Task<IActionResult> Login(LogInViewModel userLogIn)
         {
             User? foundUser = await _taskContext.Users
                                             .Where(u => u.Email == userLogIn.Email)
@@ -50,20 +89,42 @@ namespace Task_Tracker_WebApp.Controllers
                 return View("Login");
             }
 
-            var token = _jwtGenerator.GenerateToken(foundUser);
+            var token = _tokenGenerator.GenerateJWT(foundUser);
 
-            var cookieOptions = new CookieOptions
+            bool wasRememberMeSaved = false;
+            if (userLogIn.RememberMe)
             {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddHours(12)
-            };
-            Response.Cookies.Append("JWToken", token, cookieOptions);
+                var rememberMe = _tokenGenerator.GenerateRememberMe(foundUser.Id);
+
+                using (var transaction = await _taskContext.Database.BeginTransactionAsync())
+                {
+                    try
+                    {
+                        await _taskContext.RememberMeTokens.AddAsync(rememberMe);
+                        await _taskContext.SaveChangesAsync();
+
+                        await transaction.CommitAsync();
+                        wasRememberMeSaved = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($@"An error occurred during 
+                                            RememberMeToken creation with message {ex.Message}");
+                        await transaction.RollbackAsync();
+                        wasRememberMeSaved = false;
+                    }
+                }
+
+                if(wasRememberMeSaved)
+                    Response.Cookies.Append("RememberMe", rememberMe.Token, _rememberMeOptions);
+            }
+
+            Response.Cookies.Append("JWToken", token, _accessTokenOptions);
 
             return RedirectToAction("Dashboard", "TaskHome");
         }
 
+        [HttpGet]
         public IActionResult SignIn()
         {
             return View();
@@ -71,7 +132,7 @@ namespace Task_Tracker_WebApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SignInUser(SignInViewModel userSignIn)
+        public async Task<IActionResult> SignIn(SignInViewModel userSignIn)
         {
             if(!ModelState.IsValid)
                 return View(userSignIn);
@@ -97,7 +158,9 @@ namespace Task_Tracker_WebApp.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                _logger.LogError($"An error occurred during User Registration with email {userSignIn.Email} because: {ex.Message}");
+                _logger.LogError($@"
+                                An error occurred during User creation
+                                with email {userSignIn.Email} with message: {ex.Message}");
             }
 
             ViewData["SignInMessage"] = "Your registration was successful!";

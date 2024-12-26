@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using Task_Tracker_WebApp.Cache;
 using Task_Tracker_WebApp.Cache.Enums;
 using Task_Tracker_WebApp.Database;
 using Task_Tracker_WebApp.Database.Entities;
+using Task_Tracker_WebApp.Models;
 using Task_Tracker_WebApp.Models.View;
 
 namespace Task_Tracker_WebApp.Controllers
@@ -17,6 +19,8 @@ namespace Task_Tracker_WebApp.Controllers
         private readonly MemoryCacheHandler _cache;
         private readonly TaskContext _taskContext;
 
+        private readonly int dashboardPageSize = 6;
+
         public TaskHomeController(TaskContext context,
             ILogger<TaskHomeController> logger,
             MemoryCacheHandler cache)
@@ -27,7 +31,7 @@ namespace Task_Tracker_WebApp.Controllers
         }
 
         [HttpGet]
-        public IActionResult Dashboard()
+        public async Task<IActionResult> Dashboard(int pageNumber = 1)
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userName = User.FindFirstValue("username");
@@ -43,29 +47,60 @@ namespace Task_Tracker_WebApp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            if (!_cache.Get(CachePrefix.UserTasks, userId, out IEnumerable<TaskViewModel>? tasksViewModel))
+            IEnumerable<UserTaskViewModel> taskResponseList;
+            if (!_cache.Get(CachePrefix.UserTaskList, 
+                            userId.ToString(), 
+                            out IEnumerable<UserTask>? taskList))
             {
-                var tasks = _taskContext.Tasks.AsNoTracking().Where(t => t.UserId == userId).ToList();
+                taskList = await _taskContext.Tasks
+                                .AsNoTracking()
+                                .OrderBy(t => t.Id)
+                                .Where(t => t.UserId == userId)
+                                .ToListAsync();
 
-                tasksViewModel = tasks.Select(t => new TaskViewModel()
-                {
-                    Id = t.Id,
-                    Title = t.Title,
-                    Description = t.Description,
-                    Status = t.Status,
-                    CreatedDate = t.CreatedDate,
-                    UpdatedDate = t.UpdatedDate
-                }).ToList();
-
-                _cache.Set(CachePrefix.UserTasks, userId, tasksViewModel);
+                _cache.Set(CachePrefix.UserTaskList,
+                            userId.ToString(),
+                            taskList);
             }
 
-            ViewData["Username"] = userName;
+            taskResponseList = taskList!
+                                    .Select(t => new UserTaskViewModel()
+                                        {
+                                            UserTask = new UserTaskResponse()
+                                            {
+                                                Id = t.Id,
+                                                Title = t.Title,
+                                                Description = t.Description,
+                                                Status = t.Status,
+                                                CreatedDate = t.CreatedDate,
+                                                UpdatedDate = t.UpdatedDate
+                                            }
+                                        }).ToList();
 
-            return View(tasksViewModel);
+            var paginatedResult = taskResponseList!
+                                .Skip((pageNumber - 1) * dashboardPageSize)
+                                .Take(dashboardPageSize)
+                                .ToList();
+
+            int totalTasks = taskResponseList!.Count();
+            int totalPages = (int)Math.Ceiling(totalTasks / (double)dashboardPageSize);
+            var viewModelResult = new UserTaskListViewModel()
+            {
+                Tasks = paginatedResult,
+                PageNumber = pageNumber,
+                PageSize = dashboardPageSize,
+                TotalPages = totalPages,
+                TotalTasks = totalTasks
+            };
+
+            ViewData["Username"] = userName;
+            ViewData["ActualPage"] = pageNumber;
+
+            return View(viewModelResult);
         }
 
-        public async Task<IActionResult> CreateOrEdit(int? id)
+        [HttpGet]
+        public IActionResult Create()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userName = User.FindFirstValue("username");
@@ -82,37 +117,16 @@ namespace Task_Tracker_WebApp.Controllers
             }
 
             ViewData["Username"] = userName;
-
-            if (id is not null)
-            {
-                UserTask? foundTask;
-                if (_cache.Get(CachePrefix.UserTasks, userId, out IEnumerable<UserTask>? userTasks))
-                    foundTask = userTasks!.FirstOrDefault(t => t.Id == id);
-                else
-                    foundTask = await _taskContext.Tasks.FindAsync(id);
-
-                if (foundTask is null)
-                    return NotFound();
-
-                var viewModel = new TaskViewModel()
-                {
-                    Id = foundTask.Id,
-                    Title = foundTask.Title,
-                    Description = foundTask.Description,
-                    Status = foundTask.Status,
-                    CreatedDate = foundTask.CreatedDate,
-                    UpdatedDate = foundTask.UpdatedDate
-                };
-                return View(viewModel);
-            }
 
             return View();
         }
+
         [HttpPost]
-        public async Task<IActionResult> SaveTask(TaskViewModel taskViewModel)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(UserTaskViewModel taskViewModel)
         {
             if (!ModelState.IsValid)
-                return View("CreateOrEdit", taskViewModel);
+                return RedirectToAction("Create", taskViewModel);
 
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -126,33 +140,93 @@ namespace Task_Tracker_WebApp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            if (taskViewModel.Id == null)
-                await add(taskViewModel, userId);
-            else
+            if (!_cache.Get(CachePrefix.UserTaskList,
+                        userId.ToString(),
+                        out IEnumerable<UserTask>? taskList))
             {
-                UserTask? userTask = await _taskContext.Tasks.FindAsync(taskViewModel.Id);
+                taskList = await _taskContext.Tasks
+                                                .AsNoTracking()
+                                                .OrderBy(t => t.Id)
+                                                .Where(t => t.UserId == userId)
+                                                .ToListAsync();
 
-                if (userTask is null)
-                    NotFound();
+                _cache.Set(CachePrefix.UserTaskList, userId.ToString(), taskList);
+            }
+            
+            bool isTaskTitleDuplicate = taskList!.Any(t => t.UserId == userId 
+                                                    && t.Title == taskViewModel.UserTask!.Title);
 
-                if (userTask is not null
-                    && userTask.UserId != userId)
-                {
-                    ViewData["InvalidModel"] = "Task being edited is not yours.";
-                    return View(taskViewModel);
-                }
-
-                await edit(userTask!, taskViewModel);
+            if (isTaskTitleDuplicate)
+            {
+                ViewData["GeneralError"] = "A Task with the same Title was found";
+                return RedirectToAction("Create", taskViewModel);
             }
 
-            _cache.Remove(CachePrefix.UserTasks, userId);
+            var userTask = await add(taskViewModel.UserTask!, userId);
+
+            _cache.Set(CachePrefix.UserTask, $"{userId}_{userTask.Id}", userTask);
+            _cache.Remove(CachePrefix.UserTaskList, $"{userId}");
 
             return RedirectToAction("Dashboard");
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Delete(int id)
+        [HttpGet]
+        public async Task<IActionResult> Edit(int taskId)
         {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userName = User.FindFirstValue("username");
+
+            if (!int.TryParse(userIdString, out int userId)
+                || string.IsNullOrEmpty(userName))
+            {
+                _logger.LogWarning(
+                    @$"User tried to get in dashboard with invalid auth values:
+                        UserId: {userId}");
+
+                ViewData["AuthError"] = "Unauthorized access";
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (!_cache.Get(CachePrefix.UserTask, $"{userId}_{taskId}", out UserTask? userTask))
+            {
+                userTask = await _taskContext.Tasks
+                                                .FirstOrDefaultAsync(t =>
+                                                                    t.Id == taskId
+                                                                    && t.UserId == userId);
+
+                if (userTask == null)
+                {
+                    ViewData["DeleteError"] = "Task to delete was not found";
+                    return RedirectToAction("Dashboard");
+                }
+
+                _cache.Set(CachePrefix.UserTask, $"{userId}_{taskId}", userTask);
+            }
+
+            UserTaskViewModel response = new()
+            {
+                UserTask = new UserTaskResponse()
+                {
+                    Id = userTask!.Id,
+                    Title = userTask!.Title,
+                    Description = userTask!.Description,
+                    Status = userTask!.Status,
+                    CreatedDate = userTask!.CreatedDate,
+                    UpdatedDate = userTask!.UpdatedDate,
+                }
+            };
+
+            ViewData["Username"] = userName;
+
+            return View(response);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Edit(UserTaskViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return RedirectToAction("Edit", model);
+
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!int.TryParse(userIdString, out int userId))
@@ -165,16 +239,85 @@ namespace Task_Tracker_WebApp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            var task = await _taskContext.Tasks.FindAsync(id);
+            if (!_cache.Get(CachePrefix.UserTask, $"{userId}_{model.UserTask!.Id}", out UserTask? userTask))
+            {
+                userTask = await _taskContext.Tasks
+                                                .FirstOrDefaultAsync(t =>
+                                                                    t.Id == model.UserTask!.Id
+                                                                    && t.UserId == userId);
 
-            if (task is null)
-                return NotFound();
+                if (userTask == null)
+                {
+                    ViewData["DeleteError"] = "Task to delete was not found";
+                    return RedirectToAction("Edit", model);
+                }
+
+                _cache.Set(CachePrefix.UserTask, $"{userId}_{model.UserTask!.Id}", userTask);
+            }
 
             using (var transaction = await _taskContext.Database.BeginTransactionAsync())
             {
                 try
                 {
-                    _taskContext.Tasks.Remove(task);
+                    userTask!.Title = model.UserTask.Title;
+                    userTask!.Description = model.UserTask.Description;
+                    userTask!.Status = model.UserTask.Status;
+                    userTask!.UpdatedDate = DateTime.UtcNow;
+
+                    _taskContext.Tasks.Update(userTask);
+                    await _taskContext.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError($@"An error occurred during a transaction in Task Edition
+                                    where id is {model.UserTask.Id} and exception {ex.Message}");
+                }
+            }
+
+            _cache.Remove(CachePrefix.UserTaskList, userId.ToString());
+            _cache.Remove(CachePrefix.UserTask, $"{userId}_{model.UserTask.Id}");
+
+            return RedirectToAction("Dashboard");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Remove(int taskId)
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdString, out int userId))
+            {
+                _logger.LogWarning(
+                    @$"User tried to get in dashboard with invalid auth values:
+                        UserId: {userId}");
+
+                ViewData["AuthError"] = "Unauthorized access";
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (!_cache.Get(CachePrefix.UserTask, $"{userId}_{taskId}", out UserTask? userTask))
+            {
+                userTask = await _taskContext.Tasks
+                                                .FirstOrDefaultAsync(t =>
+                                                                    t.Id == taskId
+                                                                    && t.UserId == userId);
+
+                if (userTask == null)
+                {
+                    ViewData["DeleteError"] = "Task to delete was not found";
+                    return RedirectToAction("Dashboard");
+                }
+            }
+
+            using (var transaction = await _taskContext.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    _taskContext.Tasks.Remove(userTask!);
                     await _taskContext.SaveChangesAsync();
 
                     await transaction.CommitAsync();
@@ -183,16 +326,17 @@ namespace Task_Tracker_WebApp.Controllers
                 {
                     await transaction.RollbackAsync();
                     _logger.LogError($@"An error occurred during a transaction in Task Deletion
-                                    where id is {id} and exception {ex.Message}");
+                                    where id is {taskId} and exception {ex.Message}");
                 }
             }
 
-            _cache.Remove(CachePrefix.UserTasks, userId);
+            _cache.Remove(CachePrefix.UserTaskList, userId.ToString());
+            _cache.Remove(CachePrefix.UserTask, $"{userId}_{taskId}");
 
             return RedirectToAction("Dashboard");
         }
 
-        private async Task add(TaskViewModel taskViewModel, int userId)
+        private async Task<UserTask> add(UserTaskResponse taskViewModel, int userId)
         {
             UserTask userTask = new()
             {
@@ -218,33 +362,8 @@ namespace Task_Tracker_WebApp.Controllers
                                     where exception {ex.Message}");
                 }
             }
-        }
 
-        private async Task edit(
-            UserTask userTask,
-            TaskViewModel taskViewModel)
-        {
-            using (var transaction = await _taskContext.Database.BeginTransactionAsync())
-            {
-                try
-                {
-                    userTask.Title = taskViewModel.Title;
-                    userTask.Description = taskViewModel.Description;
-                    userTask.Status = taskViewModel.Status;
-                    userTask.UpdatedDate = DateTime.Now;
-
-                    _taskContext.Tasks.Update(userTask);
-                    await _taskContext.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError($@"An error occurred during a transaction in Task Edition
-                                    where Task Id {userTask.Id} exception {ex.Message}");
-                }
-            }
+            return userTask;
         }
     }
 }

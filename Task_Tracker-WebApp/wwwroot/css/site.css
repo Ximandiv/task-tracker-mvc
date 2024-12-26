@@ -18,5 +18,192 @@ html {
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: 'Arial', sans-serif;
+}
+
+a {
+    color: #00bcd4;
+    text-decoration: none;
+}
+
+a:hover, a:focus {
+    color: #018f8f;
+}
+
+.btn {
+    color: white;
+    border: none;
+}
+
+.btn:hover {
+    opacity: 0.85;
+}
+
+.btn-create {
+    background-color: #2a9d8f;
+    color: white;
+}
+
+.btn-create:hover {
+    background-color: #21867a;
+}
+
+.btn-edit {
+    background-color: #e4a261;
+    color: white;
+}
+
+.btn-edit:hover {
+    background-color: #d17a2b;
+}
+
+.btn-remove {
+    background-color: #e76f51;
+    color: white;
+}
+
+.btn-remove:hover {
+    background-color: #c84e3f;
+}
+
+.btn-cancel {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+}
+
+.btn-cancel:hover {
+    background-color: #5a6368;
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+.form-control {
+    background-color: #333333;
+    color: #e0e0e0;
+    border: 1px solid #555555;
+}
+
+    .form-control:focus {
+        background-color: #333333;
+        color: #e0e0e0;
+        border-color: #258cfb;
+    }
+
+.form-check-input {
+    background-color: #444444;
+    border: 1px solid #555555;
+}
+
+    .form-check-input:checked {
+        background-color: #258cfb;
+        border-color: #258cfb;
+    }
+
+/* Navbar */
+.navbar {
+    background-color: #1f1f1f;
+    color: #e0e0e0;
+    border-bottom: 1px solid #333333;
+}
+
+.navbar-brand, .navbar-nav .nav-link {
+    color: #e0e0e0;
+}
+
+    .navbar-nav .nav-link:hover, .navbar-nav .nav-link:focus {
+        color: #00bcd4;
+    }
+
+/* Cards */
+.card {
+    background-color: #1c1c1c;
+    border: 1px solid #333333;
+}
+
+.card-body {
+    color: #e0e0e0;
+}
+
+.card-title {
+    color: #f1f1f1;
+}
+
+.card-footer {
+    background-color: #2a2a2a;
+    color: #b0b0b0;
+}
+
+/* Form labels */
+label {
+    color: #b0b0b0;
+}
+
+/* Table */
+.table {
+    background-color: #1c1c1c;
+    color: #e0e0e0;
+}
+
+    .table th, .table td {
+        border: 1px solid #333333;
+    }
+
+    .table th {
+        background-color: #333333;
+        color: #e0e0e0;
+    }
+
+/* Alerts */
+.alert {
+    background-color: #333333;
+    color: #e0e0e0;
+    border-color: #555555;
+}
+
+.alert-success {
+    background-color: #2d6a4f;
+    border-color: #1c4934;
+}
+
+.alert-danger {
+    background-color: #d32f2f;
+    border-color: #9a2121;
+}
+
+.alert-info {
+    background-color: #0288d1;
+    border-color: #01579b;
+}
+
+.alert-warning {
+    background-color: #fbc02d;
+    border-color: #c49016;
+}
+
+/* Footer */
+footer {
+    background-color: #1f1f1f;
+    color: #e0e0e0;
+    padding: 10px;
+    text-align: center;
+}
+
+/* Modals */
+.modal-content {
+    background-color: #1c1c1c;
+    color: #e0e0e0;
+}
+
+.modal-header {
+    border-bottom: 1px solid #333333;
+}
+
+.modal-footer {
+    border-top: 1px solid #333333;
 }

@@ -1,0 +1,140 @@
+﻿@model UserTaskViewModel
+
+<div class="container mt-4">
+    @if (Model.UserTask == null)
+    {
+        <h2 class="text-center">Create Task</h2>
+    }
+    else
+    {
+        <h2 class="text-center">Update Task</h2>
+    }
+
+    @if(Model.UserTask == null)
+    {
+        <form id="CreateTaskForm" asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="UserTask!.Id" id="Id"/>
+            <div class="mb-3">
+                <label class="form-label" asp-for="UserTask!.Title">Title</label>
+                <input 
+                type="text" 
+                asp-for="UserTask!.Title"
+                class="form-control"
+                placeholder="Enter task title" />
+                <span asp-validation-for="UserTask!.Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="UserTask!.Description" class="form-label">Description</label>
+                <textarea 
+                asp-for="UserTask!.Description"
+                class="form-control" 
+                rows="4" 
+                placeholder="Enter task description"></textarea>
+                <span asp-validation-for="UserTask!.Description" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="UserTask!.Status" class="form-label">Status</label>
+                <select asp-for="UserTask!.Status" class="form-select bg-dark text-light border-secondary">
+                    <option value="">-- Select Status --</option>
+                    <option value="To-Do">To-Do</option>
+                    <option value="In-Progress">In-Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+                <span asp-validation-for="UserTask!.Status" class="text-danger"></span>
+            </div>
+
+            @if (ViewData["GeneralError"] != null)
+            {
+                <span class="text-danger mt-4" id="Error-Validation">@ViewData["GeneralError"]</span>
+            }
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-create">
+                    Create
+                </button>
+            </div>
+            <div class="mt-4">
+                <a asp-controller="TaskHome" asp-action="Dashboard" class="btn btn-secondary w-100">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    }
+    else
+    {
+        <form id="CreateTaskForm" asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="UserTask!.Id" id="Id" />
+            <div class="mb-3">
+                <label class="form-label" asp-for="UserTask!.Title">Title</label>
+                <input type="text"
+                       asp-for="UserTask!.Title"
+                       class="form-control"
+                       placeholder="Enter task title" />
+                <span id="Title-Validation" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="UserTask!.Description" class="form-label">Description</label>
+                <textarea asp-for="UserTask!.Description"
+                          class="form-control"
+                          rows="4"
+                          placeholder="Enter task description"></textarea>
+                <span id="Description-Validation" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="UserTask!.Status" class="form-label">Status</label>
+                <select asp-for="UserTask!.Status" class="form-select bg-dark text-light border-secondary">
+                    <option value="">-- Select Status --</option>
+                    @if (Model.UserTask!.Status == "To-Do")
+                    {
+                        <option value="To-Do" selected>To-Do</option>
+                    }
+                    else
+                    {
+                        <option value="To-Do">To-Do</option>
+                    }
+
+                    @if (Model.UserTask!.Status == "In-Progress")
+                    {
+                        <option value="In-Progress" selected>In-Progress</option>
+                    }
+                    else
+                    {
+                        <option value="In-Progress">In-Progress</option>
+                    }
+
+                    @if (Model.UserTask!.Status == "Completed")
+                    {
+                        <option value="Completed" selected>Completed</option>
+                    }
+                    else
+                    {
+                        <option value="Completed">Completed</option>
+                    }
+                </select>
+                <span asp-validation-for="UserTask!.Status" class="text-danger"></span>
+            </div>
+
+            @if (ViewData["GeneralError"] != null)
+            {
+                <span class="text-danger mt-4" id="Error-Validation">@ViewData["GeneralError"]</span>
+            }
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-edit">
+                    Update
+                </button>
+            </div>
+            <div class="mt-4">
+                <a asp-controller="TaskHome" asp-action="Dashboard" class="btn btn-secondary w-100">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    }
+</div>

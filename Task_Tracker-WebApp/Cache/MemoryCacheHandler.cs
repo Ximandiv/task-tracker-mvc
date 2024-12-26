@@ -19,23 +19,26 @@ namespace Task_Tracker_WebApp.Cache
                     .SetAbsoluteExpiration(TimeSpan.FromHours(absoluteExpHours));
         }
 
-        public void Set<T>(CachePrefix prefixKey, int userId, T value) => _cache.Set(getPrefix(prefixKey) + userId, value, _options);
+        public void Set<T>(CachePrefix prefixKey, string suffixKey, T value)
+            => _cache.Set(getPrefix(prefixKey) + suffixKey, value, _options);
 
-        public bool Get<T>(CachePrefix prefixKey, int userId, out T? value)
+        public bool Get<T>(CachePrefix prefixKey, string suffixKey, out T? value)
         {
-            if(!_cache.TryGetValue(getPrefix(prefixKey) + userId, out value))
+            if(!_cache.TryGetValue(getPrefix(prefixKey) + suffixKey, out value))
                 return false;
 
             return true;
         }
 
-        public void Remove(CachePrefix prefixKey, int userId) => _cache.Remove(getPrefix(prefixKey) + userId);
+        public void Remove(CachePrefix prefixKey, string suffixKey)
+            => _cache.Remove(getPrefix(prefixKey) + suffixKey);
 
         private string getPrefix(CachePrefix prefix)
         {
             return prefix switch
             {
-                CachePrefix.UserTasks => "UserTasks_",
+                CachePrefix.UserTaskList => "UserTaskList_",
+                CachePrefix.UserTask => "UserTask_",
                 _ => throw new ArgumentOutOfRangeException(nameof(prefix), prefix, null)
             };
         }

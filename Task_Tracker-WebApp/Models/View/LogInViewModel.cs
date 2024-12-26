@@ -12,5 +12,7 @@ namespace Task_Tracker_WebApp.Models.View
         [StringLength(50)]
         [DataType(DataType.Password)]
         public string? Password { get; set; }
+
+        public bool RememberMe { get; set; }
     }
 }

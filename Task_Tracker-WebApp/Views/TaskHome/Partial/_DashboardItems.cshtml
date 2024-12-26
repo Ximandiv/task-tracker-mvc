@@ -1,0 +1,59 @@
+﻿@model UserTaskViewModel
+
+<div class="col-md-4 task">
+
+    <div class="card">
+
+        <div class="card-body">
+
+            <h5 class="card-title">@Model.UserTask!.Title</h5>
+
+            <p class="card-text">@Model.UserTask!.Description</p>
+
+            <p>
+                Status:
+                @if (Model.UserTask!.Status == "To-Do")
+                {
+                    <span class="badge bg-secondary">@Model.UserTask.Status</span>
+                }
+                else if (Model.UserTask!.Status == "In-Progress")
+                {
+                    <span class="badge bg-primary">@Model.UserTask.Status</span>
+                }
+                else if (Model.UserTask!.Status == "Completed")
+                {
+                    <span class="badge bg-success">@Model.UserTask.Status</span>
+                }
+            </p>
+
+            <p>Created: @Model.UserTask!.CreatedDate.ToString("yyyy-MM-dd")</p>
+
+            <p>Updated: @Model.UserTask!.UpdatedDate.ToString("yyyy-MM-dd")</p>
+
+            <div class="d-flex justify-content-between">
+
+                <a asp-action="Edit"
+                    asp-route-taskId="@Model.UserTask!.Id"
+                    class="btn btn-edit btn-sm">
+                    Edit
+                </a>
+
+                <form id="remove-form"
+                        method="post"
+                        asp-action="Remove"
+                        asp-controller="TaskHome"
+                        asp-route-taskId="@Model.UserTask!.Id"
+                        asp-route-pageNumber="@ViewData["ActualPage"]"
+                        onsubmit="return handleTaskDelete(event, @Model.UserTask!.Id)">
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit" class="btn btn-remove btn-sm">Remove</button>
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

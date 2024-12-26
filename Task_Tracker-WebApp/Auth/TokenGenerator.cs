@@ -2,21 +2,22 @@
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Task_Tracker_WebApp.Database.Entities;
 
 namespace Task_Tracker_WebApp.Auth
 {
-    public class JWTGenerator
+    public class TokenGenerator
     {
         private readonly IConfiguration _configuration;
 
-        public JWTGenerator(IConfiguration config)
+        public TokenGenerator(IConfiguration config)
         {
             _configuration = config;
         }
 
-        public string GenerateToken(User user)
+        public string GenerateJWT(User user)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
@@ -43,6 +44,25 @@ namespace Task_Tracker_WebApp.Auth
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public RememberMeToken GenerateRememberMe(int userId)
+        {
+            var tokenBytes = new byte[64];
+
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(tokenBytes);
+            }
+
+            var token = Convert.ToBase64String(tokenBytes);
+
+            return new RememberMeToken
+            {
+                UserId = userId,
+                Token = token,
+                Expiration = DateTime.UtcNow.AddMonths(1)
+            };
         }
     }
 }
