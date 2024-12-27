@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Task_Tracker_WebApp.Cache;
 using Task_Tracker_WebApp.Cache.Enums;
 using Task_Tracker_WebApp.Database;
@@ -93,8 +92,8 @@ namespace Task_Tracker_WebApp.Controllers
                 TotalTasks = totalTasks
             };
 
+            TempData["ActualPage"] = pageNumber;
             ViewData["Username"] = userName;
-            ViewData["ActualPage"] = pageNumber;
             ViewData["SuccessOperation"] = TempData["SuccessOperation"] ?? null;
             ViewData["DeleteError"] = TempData["DeleteError"] ?? null;
 
@@ -164,13 +163,38 @@ namespace Task_Tracker_WebApp.Controllers
                 return View(taskViewModel);
             }
 
-            var userTask = await add(taskViewModel.UserTask!, userId);
+            UserTask userTask = new()
+            {
+                Title = taskViewModel.UserTask!.Title,
+                Description = taskViewModel.UserTask!.Description,
+                Status = taskViewModel.UserTask!.Status,
+                UserId = userId
+            };
+
+            using (var transaction = await _taskContext.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    await _taskContext.Tasks.AddAsync(userTask);
+                    await _taskContext.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError($@"An error occurred during a transaction in Task Creation
+                                    where exception {ex.Message}");
+                    ViewData["GeneralError"] = "An error occurred during Task Creation";
+                    return View(taskViewModel);
+                }
+            }
 
             _cache.Set(CachePrefix.UserTask, $"{userId}_{userTask.Id}", userTask);
             _cache.Remove(CachePrefix.UserTaskList, $"{userId}");
 
             TempData["SuccessOperation"] = "Task was successfully created";
-            return RedirectToAction("Dashboard");
+            return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
         }
 
         [HttpGet]
@@ -200,7 +224,7 @@ namespace Task_Tracker_WebApp.Controllers
                 if (userTask == null)
                 {
                     TempData["DeleteError"] = "Task to edit was not found";
-                    return RedirectToAction("Dashboard");
+                    return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
                 }
 
                 _cache.Set(CachePrefix.UserTask, $"{userId}_{taskId}", userTask);
@@ -252,7 +276,7 @@ namespace Task_Tracker_WebApp.Controllers
                 if (userTask == null)
                 {
                     TempData["DeleteError"] = "Task to delete was not found";
-                    return RedirectToAction("Dashboard");
+                    return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
                 }
 
                 _cache.Set(CachePrefix.UserTask, $"{userId}_{model.UserTask!.Id}", userTask);
@@ -285,6 +309,8 @@ namespace Task_Tracker_WebApp.Controllers
                     await transaction.RollbackAsync();
                     _logger.LogError($@"An error occurred during a transaction in Task Edition
                                     where id is {model.UserTask.Id} and exception {ex.Message}");
+                    ViewData["GeneralError"] = "An error occurred during Task Edition";
+                    return View(model);
                 }
             }
 
@@ -292,7 +318,7 @@ namespace Task_Tracker_WebApp.Controllers
             _cache.Remove(CachePrefix.UserTask, $"{userId}_{model.UserTask.Id}");
 
             TempData["SuccessOperation"] = "Task was successfully edited";
-            return RedirectToAction("Dashboard");
+            return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
         }
 
         [HttpPost]
@@ -321,7 +347,7 @@ namespace Task_Tracker_WebApp.Controllers
                 if (userTask == null)
                 {
                     TempData["DeleteError"] = "Task to delete was not found";
-                    return View("Dashboard");
+                    return View("Dashboard", new { pageNumber = TempData["ActualPage"] });
                 }
             }
 
@@ -339,6 +365,8 @@ namespace Task_Tracker_WebApp.Controllers
                     await transaction.RollbackAsync();
                     _logger.LogError($@"An error occurred during a transaction in Task Deletion
                                     where id is {taskId} and exception {ex.Message}");
+                    TempData["DeleteError"] = "An error occurred during Task deletion";
+                    return View("Dashboard", new { pageNumber = TempData["ActualPage"] });
                 }
             }
 
@@ -346,37 +374,7 @@ namespace Task_Tracker_WebApp.Controllers
             _cache.Remove(CachePrefix.UserTask, $"{userId}_{taskId}");
 
             TempData["SuccessOperation"] = "Task was successfully removed";
-            return RedirectToAction("Dashboard");
-        }
-
-        private async Task<UserTask> add(UserTaskResponse taskViewModel, int userId)
-        {
-            UserTask userTask = new()
-            {
-                Title = taskViewModel.Title,
-                Description = taskViewModel.Description,
-                Status = taskViewModel.Status,
-                UserId = userId
-            };
-
-            using (var transaction = await _taskContext.Database.BeginTransactionAsync())
-            {
-                try
-                {
-                    await _taskContext.Tasks.AddAsync(userTask);
-                    await _taskContext.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError($@"An error occurred during a transaction in Task Creation
-                                    where exception {ex.Message}");
-                }
-            }
-
-            return userTask;
+            return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
         }
     }
 }
