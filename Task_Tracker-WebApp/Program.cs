@@ -1,12 +1,5 @@
-using Task_Tracker_WebApp.Auth;
 using Task_Tracker_WebApp.Extension_Methods;
 using Task_Tracker_WebApp.Middleware;
-using Task_Tracker_WebApp.Repositories;
-using Task_Tracker_WebApp.Repositories.Instances;
-using Task_Tracker_WebApp.Repositories.Interfaces;
-using Task_Tracker_WebApp.Use_Cases.Auth;
-using Task_Tracker_WebApp.Use_Cases.Cache;
-using Task_Tracker_WebApp.Use_Cases.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 

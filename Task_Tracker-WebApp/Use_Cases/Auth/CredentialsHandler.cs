@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Task_Tracker_WebApp.Auth;
 using Task_Tracker_WebApp.Database.Entities;
 using Task_Tracker_WebApp.Models;
 using Task_Tracker_WebApp.Repositories.Interfaces;

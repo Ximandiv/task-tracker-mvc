@@ -1,6 +1,5 @@
 ﻿using Task_Tracker_WebApp.Cache.Enums;
 using Task_Tracker_WebApp.Database.Entities;
-using Task_Tracker_WebApp.Models.ViewModel;
 using Task_Tracker_WebApp.Models;
 using Task_Tracker_WebApp.Use_Cases.Auth.Models;
 using Task_Tracker_WebApp.Repositories.Interfaces;
