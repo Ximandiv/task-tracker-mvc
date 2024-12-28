@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Task_Tracker_WebApp.Database.Entities;
 
 namespace Task_Tracker_WebApp.Models
 {
-    public class UserTaskResponse
+    public class UserTaskModel
     {
         public int? Id { get; set; }
 
@@ -22,5 +23,17 @@ namespace Task_Tracker_WebApp.Models
 
         [Required]
         public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
+
+        public UserTaskModel() { }
+
+        public UserTaskModel(UserTask user)
+        {
+            Id = user.Id;
+            Title = user.Title!;
+            Description = user.Description;
+            Status = user.Status!;
+            CreatedDate = user.CreatedAt;
+            UpdatedDate = user.UpdatedAt;
+        }
     }
 }

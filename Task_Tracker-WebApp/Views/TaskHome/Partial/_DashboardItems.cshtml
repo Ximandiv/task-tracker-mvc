@@ -1,4 +1,4 @@
-﻿@model UserTaskViewModel
+﻿@model UserTaskModel
 
 <div class="col-md-4 task">
 
@@ -6,48 +6,53 @@
 
         <div class="card-body">
 
-            <h5 class="card-title">@Model.UserTask!.Title</h5>
+            <h4 class="card-title fw-bold text-decoration-underline">@Model.Title</h4>
 
-            <p class="card-text">@Model.UserTask!.Description</p>
+            <p class="card-text">@Model.Description</p>
 
             <p>
                 Status:
-                @if (Model.UserTask!.Status == "To-Do")
+                @if (Model.Status == "To-Do")
                 {
-                    <span class="badge bg-secondary">@Model.UserTask.Status</span>
+                    <span class="badge bg-secondary">@Model.Status</span>
                 }
-                else if (Model.UserTask!.Status == "In-Progress")
+                else if (Model.Status == "In-Progress")
                 {
-                    <span class="badge bg-primary">@Model.UserTask.Status</span>
+                    <span class="badge bg-primary">@Model.Status</span>
                 }
-                else if (Model.UserTask!.Status == "Completed")
+                else if (Model.Status == "Completed")
                 {
-                    <span class="badge bg-success">@Model.UserTask.Status</span>
+                    <span class="badge bg-success">@Model.Status</span>
                 }
             </p>
 
-            <p>Created: @Model.UserTask!.CreatedDate.ToString("yyyy-MM-dd")</p>
+            <p>Created: @Model.CreatedDate.ToString("yyyy-MM-dd")</p>
 
-            <p>Updated: @Model.UserTask!.UpdatedDate.ToString("yyyy-MM-dd")</p>
+            <p>Updated: @Model.UpdatedDate.ToString("yyyy-MM-dd")</p>
 
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-evenly mt-4" id="forms-container">
 
-                <a asp-action="Edit"
-                    asp-route-taskId="@Model.UserTask!.Id"
-                    class="btn btn-edit btn-sm">
-                    Edit
-                </a>
+                <div class="w-50 text-center" id="edit-form">
+                    <a asp-action="Edit"
+                        asp-route-taskId="@Model.Id"
+                        class="btn btn-edit btn-sm"
+                        id="Edit-Btn"
+                        data-id="@Model.Id">
+                        Edit
+                    </a>
+                </div>
 
                 <form id="remove-form"
+                        class="w-50 text-center"
                         method="post"
                         asp-action="Remove"
                         asp-controller="TaskHome"
-                        asp-route-taskId="@Model.UserTask!.Id"
-                        asp-route-pageNumber="@ViewData["ActualPage"]"
-                        onsubmit="return handleTaskDelete(event, @Model.UserTask!.Id)">
+                        asp-route-taskId="@Model.Id"
+                        asp-route-pageNumber="@ViewData["ActualPage"]">
                     @Html.AntiForgeryToken()
-
-                    <button type="submit" class="btn btn-remove btn-sm">Remove</button>
+                    <div id="Remove-Section">
+                        <button type="button" class="btn btn-remove btn-sm" id="Remove-Btn">Remove</button>
+                    </div>
                 </form>
 
             </div>

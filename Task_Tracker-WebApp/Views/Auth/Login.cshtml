@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "Log-In";
 }
-<div class="login-container">
+<div class="login-container text-light">
     <div class="form-container">
         <h2>Login</h2>
 
@@ -13,20 +13,25 @@
 
         <form asp-action="Login" asp-controller="Auth" method="post">
             @Html.AntiForgeryToken()
-            <label asp-for="Email">Email</label>
-            <input type="email" placeholder="Email" asp-for="Email" required />
-            <span asp-validation-for="Email"></span>
 
-            <label asp-for="Password">Password</label>
-            <input type="password" placeholder="Password" asp-for="Password" required />
-            <span asp-validation-for="Password"></span>
-
-            <div class="form-check mt-4 mb-4">
-                <input asp-for="RememberMe" class="form-check-input" />
-                <label asp-for="RememberMe" class="form-check-label">Remember Me</label>
+            <div class="mb-4">
+                <label asp-for="User!.Email" class="text-light"></label>
+                <input type="email" placeholder="Email" asp-for="User!.Email" class="form-control" required />
+                <span asp-validation-for="User!.Email"></span>
             </div>
 
-            <button type="submit">Log-In</button>
+            <div action="mb-4">
+                <label asp-for="User!.Password" class="text-light"></label>
+                <input type="password" placeholder="Password" asp-for="User!.Password" class="form-control" required />
+                <span asp-validation-for="User!.Password"></span>
+            </div>
+
+            <div class="form-check mt-4 mb-4">
+                <input asp-for="User!.RememberMe" class="form-check-input" />
+                <label asp-for="User!.RememberMe" class="form-check-label text-light">Remember Me</label>
+            </div>
+
+            <button type="submit" class="btn btn-dark">Log-In</button>
         </form>
 
         @if (ViewData["ErrorLogin"] != null)
@@ -34,6 +39,6 @@
             <span>@ViewData["ErrorLogin"]</span>
         }
 
-        <p>Don't have an account? <a asp-area="" asp-controller="Auth" asp-action="SignIn">Sign up</a></p>
+        <p class="text-light">Don't have an account? <a asp-area="" asp-controller="Auth" asp-action="SignIn">Sign up</a></p>
     </div>
 </div>

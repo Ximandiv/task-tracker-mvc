@@ -7,19 +7,25 @@
         <h2>Sign Up</h2>
         <form asp-action="SignIn" method="post">
             @Html.AntiForgeryToken()
-            <label asp-for="Username"></label>
-            <input type="text" placeholder="Username" asp-for="Username" required />
-            <span asp-validation-for="Username"></span>
+            <div class="mb-4">
+                <label asp-for="User!.Username" class="text-light"></label>
+                <input type="text" placeholder="Username" asp-for="User!.Username" class="form-control" required />
+                <span asp-validation-for="User!.Username"></span>
+            </div>
 
-            <label asp-for="Email"></label>
-            <input type="email" placeholder="Email" asp-for="Email" required />
-            <span asp-validation-for="Email"></span>
+            <div class="mb-4">
+                <label asp-for="User!.Email" class="text-light"></label>
+                <input type="email" placeholder="Email" asp-for="User!.Email" class="form-control" required />
+                <span asp-validation-for="User!.Email"></span>
+            </div>
 
-            <label asp-for="Password"></label>
-            <input type="password" placeholder="Password" asp-for="Password" required />
-            <span asp-validation-for="Password"></span>
+            <div class="mb-4">
+                <label asp-for="User!.Password" class="text-light"></label>
+                <input type="password" placeholder="Password" asp-for="User!.Password" class="form-control" required />
+                <span asp-validation-for="User!.Password"></span>
+            </div>
 
-            <button type="submit">Sign Up</button>
+            <button type="submit" class="btn btn-dark">Sign Up</button>
         </form>
         <p>Already have an account? <a asp-area="" asp-controller="Auth" asp-action="Login">Login</a></p>
     </div>

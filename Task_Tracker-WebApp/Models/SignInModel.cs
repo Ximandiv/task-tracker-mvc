@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Task_Tracker_WebApp.Database.Entities;
 
-namespace Task_Tracker_WebApp.Models.View
+namespace Task_Tracker_WebApp.Models
 {
-    public class SignInViewModel
+    public class SignInModel
     {
         [Required]
         [StringLength(25)]
@@ -16,5 +17,13 @@ namespace Task_Tracker_WebApp.Models.View
         [StringLength(50)]
         [DataType(DataType.Password)]
         public string? Password { get; set; }
+
+        public User MapToUser()
+            => new()
+            {
+                Username = Username!,
+                Email = Email!,
+                Password = Password!,
+            };
     }
 }

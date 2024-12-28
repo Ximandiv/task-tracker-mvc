@@ -1,4 +1,4 @@
-namespace Task_Tracker_WebApp.Models.View
+namespace Task_Tracker_WebApp.Models.ViewModel
 {
     public class ErrorViewModel
     {

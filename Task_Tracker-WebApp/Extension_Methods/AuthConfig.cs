@@ -2,7 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-namespace Task_Tracker_WebApp.Auth
+namespace Task_Tracker_WebApp.Extension_Methods
 {
     public static class AuthConfig
     {

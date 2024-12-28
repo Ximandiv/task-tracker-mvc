@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -23,7 +22,10 @@ namespace Task_Tracker_WebApp.Auth
             var secretKey = jwtSettings["SecretKey"];
             var issuer = jwtSettings["Issuer"];
             var audience = jwtSettings["Audience"];
-            var expiration = int.Parse(jwtSettings["ExpirationInMinutes"]!);
+
+            int expirationInMins;
+            if(!int.TryParse(jwtSettings["ExpirationInMinutes"], out expirationInMins))
+                expirationInMins = 15;
 
             var claims = new[]
             {
@@ -39,7 +41,7 @@ namespace Task_Tracker_WebApp.Auth
                 issuer,
                 audience,
                 claims,
-                expires: DateTime.UtcNow.AddMinutes(expiration),
+                expires: DateTime.UtcNow.AddMinutes(expirationInMins),
                 signingCredentials: creds
             );
 

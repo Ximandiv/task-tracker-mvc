@@ -1,99 +1,53 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using Task_Tracker_WebApp.Cache;
-using Task_Tracker_WebApp.Cache.Enums;
-using Task_Tracker_WebApp.Database;
-using Task_Tracker_WebApp.Database.Entities;
-using Task_Tracker_WebApp.Models;
-using Task_Tracker_WebApp.Models.View;
+using Task_Tracker_WebApp.Models.ViewModel;
+using Task_Tracker_WebApp.Use_Cases.Auth;
+using Task_Tracker_WebApp.Use_Cases.Tasks;
 
 namespace Task_Tracker_WebApp.Controllers
 {
     [Authorize]
-    public class TaskHomeController : Controller
+    public class TaskHomeController
+        (CredentialsHandler authService,
+        TaskOperations taskOps,
+        TaskRetrieval taskRetrieval,
+        ILogger<TaskHomeController> logger) : Controller
     {
-        private readonly ILogger<TaskHomeController> _logger;
-        private readonly MemoryCacheHandler _cache;
-        private readonly TaskContext _taskContext;
-
-        private readonly int dashboardPageSize = 6;
-
-        public TaskHomeController(TaskContext context,
-            ILogger<TaskHomeController> logger,
-            MemoryCacheHandler cache)
-        {
-            _taskContext = context;
-            _logger = logger;
-            _cache = cache;
-        }
+        private readonly ILogger<TaskHomeController> _logger = logger;
+        private readonly CredentialsHandler _authService = authService;
+        private readonly TaskOperations _taskOperations = taskOps;
+        private readonly TaskRetrieval _taskRetrieval = taskRetrieval;
 
         [HttpGet]
         public async Task<IActionResult> Dashboard(int pageNumber = 1)
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var userName = User.FindFirstValue("username");
+            var authUser = _authService.GetAuthUser(User);
 
-            if (!int.TryParse(userIdString, out int userId)
-                || string.IsNullOrEmpty(userName))
+            if (!authUser.Valid)
             {
                 _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values:
-                        UserId: {userId}");
+                    @$"User tried to get in dashboard with invalid auth values");
 
-                ViewData["AuthError"] = "Unauthorized access";
+                TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
-            IEnumerable<UserTaskViewModel> taskResponseList;
-            if (!_cache.Get(CachePrefix.UserTaskList, 
-                            userId.ToString(), 
-                            out IEnumerable<UserTask>? taskList))
+            UserTaskListViewModel? viewModelResult;
+            try
             {
-                taskList = await _taskContext.Tasks
-                                .AsNoTracking()
-                                .OrderBy(t => t.Id)
-                                .Where(t => t.UserId == userId)
-                                .ToListAsync();
+                viewModelResult = await _taskRetrieval.GetAllUserTasks(authUser, pageNumber);
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred in GET endpoint .../TaskHome/Dashboard");
 
-                _cache.Set(CachePrefix.UserTaskList,
-                            userId.ToString(),
-                            taskList);
+                ViewData["AuthError"] = "An error occurred during task retrieval";
+                return RedirectToAction("Index", "Home");
             }
 
-            taskResponseList = taskList!
-                                    .Select(t => new UserTaskViewModel()
-                                        {
-                                            UserTask = new UserTaskResponse()
-                                            {
-                                                Id = t.Id,
-                                                Title = t.Title,
-                                                Description = t.Description,
-                                                Status = t.Status,
-                                                CreatedDate = t.CreatedDate,
-                                                UpdatedDate = t.UpdatedDate
-                                            }
-                                        }).ToList();
-
-            var paginatedResult = taskResponseList!
-                                .Skip((pageNumber - 1) * dashboardPageSize)
-                                .Take(dashboardPageSize)
-                                .ToList();
-
-            int totalTasks = taskResponseList!.Count();
-            int totalPages = (int)Math.Ceiling(totalTasks / (double)dashboardPageSize);
-            var viewModelResult = new UserTaskListViewModel()
-            {
-                Tasks = paginatedResult,
-                PageNumber = pageNumber,
-                PageSize = dashboardPageSize,
-                TotalPages = totalPages,
-                TotalTasks = totalTasks
-            };
-
             TempData["ActualPage"] = pageNumber;
-            ViewData["Username"] = userName;
+
+            ViewData["Username"] = authUser.UserName;
             ViewData["SuccessOperation"] = TempData["SuccessOperation"] ?? null;
             ViewData["DeleteError"] = TempData["DeleteError"] ?? null;
 
@@ -103,21 +57,18 @@ namespace Task_Tracker_WebApp.Controllers
         [HttpGet]
         public IActionResult Create()
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var userName = User.FindFirstValue("username");
+            var authUser = _authService.GetAuthUser(User);
 
-            if (!int.TryParse(userIdString, out int userId)
-                || string.IsNullOrEmpty(userName))
+            if (!authUser.Valid)
             {
                 _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values:
-                        UserId: {userId}");
+                    @$"User tried to get in dashboard with invalid auth values");
 
                 TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
-            ViewData["Username"] = userName;
+            ViewData["Username"] = authUser.UserName;
 
             return View();
         }
@@ -129,69 +80,34 @@ namespace Task_Tracker_WebApp.Controllers
             if (!ModelState.IsValid)
                 return View(taskViewModel);
 
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var authUser = _authService.GetAuthUser(User);
 
-            if (!int.TryParse(userIdString, out int userId))
+            if (!authUser.Valid)
             {
                 _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values:
-                        UserId: {userId}");
+                    @$"User tried to get in dashboard with invalid auth values");
 
                 TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
-            if (!_cache.Get(CachePrefix.UserTaskList,
-                        userId.ToString(),
-                        out IEnumerable<UserTask>? taskList))
-            {
-                taskList = await _taskContext.Tasks
-                                                .AsNoTracking()
-                                                .OrderBy(t => t.Id)
-                                                .Where(t => t.UserId == userId)
-                                                .ToListAsync();
-
-                _cache.Set(CachePrefix.UserTaskList, userId.ToString(), taskList);
-            }
-            
-            bool isTaskTitleDuplicate = taskList!.Any(t => t.UserId == userId 
-                                                    && t.Title == taskViewModel.UserTask!.Title);
-
-            if (isTaskTitleDuplicate)
+            if (await _taskRetrieval.isTitleDuplicate(authUser, taskViewModel.UserTask!.Title))
             {
                 ViewData["GeneralError"] = "A Task with the same Title was found";
                 return View(taskViewModel);
             }
 
-            UserTask userTask = new()
+            try
             {
-                Title = taskViewModel.UserTask!.Title,
-                Description = taskViewModel.UserTask!.Description,
-                Status = taskViewModel.UserTask!.Status,
-                UserId = userId
-            };
-
-            using (var transaction = await _taskContext.Database.BeginTransactionAsync())
-            {
-                try
-                {
-                    await _taskContext.Tasks.AddAsync(userTask);
-                    await _taskContext.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError($@"An error occurred during a transaction in Task Creation
-                                    where exception {ex.Message}");
-                    ViewData["GeneralError"] = "An error occurred during Task Creation";
-                    return View(taskViewModel);
-                }
+                await _taskOperations.Create(authUser, taskViewModel.UserTask!);
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $@"An error occurred in endpoint CREATE ../TaskHome/Create");
 
-            _cache.Set(CachePrefix.UserTask, $"{userId}_{userTask.Id}", userTask);
-            _cache.Remove(CachePrefix.UserTaskList, $"{userId}");
+                ViewData["GeneralError"] = "An error occurred during Task Creation";
+                return View(taskViewModel);
+            }
 
             TempData["SuccessOperation"] = "Task was successfully created";
             return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
@@ -200,52 +116,22 @@ namespace Task_Tracker_WebApp.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int taskId)
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var userName = User.FindFirstValue("username");
+            var authUser = _authService.GetAuthUser(User);
 
-            if (!int.TryParse(userIdString, out int userId)
-                || string.IsNullOrEmpty(userName))
+            if (!authUser.Valid)
             {
                 _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values:
-                        UserId: {userId}");
+                    @$"User tried to get in dashboard with invalid auth values");
 
                 TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
-            if (!_cache.Get(CachePrefix.UserTask, $"{userId}_{taskId}", out UserTask? userTask))
-            {
-                userTask = await _taskContext.Tasks
-                                                .FirstOrDefaultAsync(t =>
-                                                                    t.Id == taskId
-                                                                    && t.UserId == userId);
+            var viewModel = await _taskRetrieval.GetByIdAndUser(taskId, authUser.Id!.Value);
 
-                if (userTask == null)
-                {
-                    TempData["DeleteError"] = "Task to edit was not found";
-                    return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-                }
+            ViewData["Username"] = authUser.UserName;
 
-                _cache.Set(CachePrefix.UserTask, $"{userId}_{taskId}", userTask);
-            }
-
-            UserTaskViewModel response = new()
-            {
-                UserTask = new UserTaskResponse()
-                {
-                    Id = userTask!.Id,
-                    Title = userTask!.Title,
-                    Description = userTask!.Description,
-                    Status = userTask!.Status,
-                    CreatedDate = userTask!.CreatedDate,
-                    UpdatedDate = userTask!.UpdatedDate,
-                }
-            };
-
-            ViewData["Username"] = userName;
-
-            return View(response);
+            return View(viewModel);
         }
 
         [HttpPost]
@@ -254,68 +140,35 @@ namespace Task_Tracker_WebApp.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var authUser = _authService.GetAuthUser(User);
 
-            if (!int.TryParse(userIdString, out int userId))
+            if (!authUser.Valid)
             {
                 _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values:
-                        UserId: {userId}");
+                    @$"User tried to get in dashboard with invalid auth values");
 
                 TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
-            if (!_cache.Get(CachePrefix.UserTask, $"{userId}_{model.UserTask!.Id}", out UserTask? userTask))
+            string error = string.Empty;
+            try
             {
-                userTask = await _taskContext.Tasks
-                                                .FirstOrDefaultAsync(t =>
-                                                                    t.Id == model.UserTask!.Id
-                                                                    && t.UserId == userId);
-
-                if (userTask == null)
-                {
-                    TempData["DeleteError"] = "Task to delete was not found";
-                    return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-                }
-
-                _cache.Set(CachePrefix.UserTask, $"{userId}_{model.UserTask!.Id}", userTask);
+                error = await _taskOperations.Update(authUser, model.UserTask!);
             }
-
-            if(model.UserTask.Title == userTask!.Title
-                && model.UserTask.Description == userTask!.Description
-                && model.UserTask.Status == userTask!.Status)
+            catch(Exception ex)
             {
-                ViewData["GeneralError"] = "Task was unchanged";
+                _logger.LogError(ex, "An error occurred in endpoint POST .../TaskHome/Edit");
+                ViewData["GeneralError"] = "An error occurred during task edition";
+
                 return View(model);
             }
 
-            using (var transaction = await _taskContext.Database.BeginTransactionAsync())
+            if(!string.IsNullOrEmpty(error))
             {
-                try
-                {
-                    userTask!.Title = model.UserTask.Title;
-                    userTask!.Description = model.UserTask.Description;
-                    userTask!.Status = model.UserTask.Status;
-                    userTask!.UpdatedDate = DateTime.UtcNow;
-
-                    _taskContext.Tasks.Update(userTask);
-                    await _taskContext.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError($@"An error occurred during a transaction in Task Edition
-                                    where id is {model.UserTask.Id} and exception {ex.Message}");
-                    ViewData["GeneralError"] = "An error occurred during Task Edition";
-                    return View(model);
-                }
+                ViewData["GeneralError"] = error;
+                return View(model);
             }
-
-            _cache.Remove(CachePrefix.UserTaskList, userId.ToString());
-            _cache.Remove(CachePrefix.UserTask, $"{userId}_{model.UserTask.Id}");
 
             TempData["SuccessOperation"] = "Task was successfully edited";
             return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
@@ -325,53 +178,35 @@ namespace Task_Tracker_WebApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Remove(int taskId)
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var authUser = _authService.GetAuthUser(User);
 
-            if (!int.TryParse(userIdString, out int userId))
+            if (!authUser.Valid)
             {
                 _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values:
-                        UserId: {userId}");
+                    @$"User tried to get in dashboard with invalid auth values");
 
                 TempData["AuthError"] = "Unauthorized access";
                 return RedirectToAction("Index", "Home");
             }
 
-            if (!_cache.Get(CachePrefix.UserTask, $"{userId}_{taskId}", out UserTask? userTask))
+            string error = string.Empty;
+            try
             {
-                userTask = await _taskContext.Tasks
-                                                .FirstOrDefaultAsync(t =>
-                                                                    t.Id == taskId
-                                                                    && t.UserId == userId);
+                error = await _taskOperations.Remove(authUser, taskId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred in endpoint POST .../TaskHome/Edit");
+                TempData["GeneralError"] = "An error occurred during task deletion";
 
-                if (userTask == null)
-                {
-                    TempData["DeleteError"] = "Task to delete was not found";
-                    return View("Dashboard", new { pageNumber = TempData["ActualPage"] });
-                }
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
             }
 
-            using (var transaction = await _taskContext.Database.BeginTransactionAsync())
+            if(!string.IsNullOrEmpty(error))
             {
-                try
-                {
-                    _taskContext.Tasks.Remove(userTask!);
-                    await _taskContext.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError($@"An error occurred during a transaction in Task Deletion
-                                    where id is {taskId} and exception {ex.Message}");
-                    TempData["DeleteError"] = "An error occurred during Task deletion";
-                    return View("Dashboard", new { pageNumber = TempData["ActualPage"] });
-                }
+                TempData["DeleteError"] = error;
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
             }
-
-            _cache.Remove(CachePrefix.UserTaskList, userId.ToString());
-            _cache.Remove(CachePrefix.UserTask, $"{userId}_{taskId}");
 
             TempData["SuccessOperation"] = "Task was successfully removed";
             return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });

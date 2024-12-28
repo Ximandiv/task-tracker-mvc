@@ -1,4 +1,4 @@
-﻿@model UserTaskListViewModel
+﻿@model UserTaskListViewModel?
 @{
     Layout = "_DashboardLayout";
     ViewData["Title"] = "Dashboard";
@@ -38,10 +38,13 @@
 
         <div class="row g-4" id="tasks-container">
 
-           @foreach(var task in Model.Tasks)
-           {
-                <partial name="Partial/_DashboardItems" model="task" />
-           }
+            @if(Model != null)
+            {
+               @foreach(var task in Model.Tasks)
+               {
+                    <partial name="Partial/_DashboardItems" model="task" />
+               }
+            }
 
         </div>
 

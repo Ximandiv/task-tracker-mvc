@@ -1,7 +1,8 @@
 ﻿@model UserTaskListViewModel
 
 <div class="d-flex justify-content-evenly align-items-center mt-4 mb-4 position-relative">
-    @if (Model.HasPreviousPage)
+    @if (Model != null
+    && Model.HasPreviousPage)
     {
         <a asp-action="Dashboard"
            asp-route-pageNumber="@(Model.PageNumber - 1)"
@@ -12,11 +13,15 @@
         <div style="width: 75px;"></div>
     }
 
-    <span class="text-center position-absolute start-50 translate-middle-x" id="pageNumbers">
-        Page @Model.PageNumber of @Model.TotalPages
-    </span>
+    @if(Model != null)
+    {
+        <span class="text-center position-absolute start-50 translate-middle-x" id="pageNumbers">
+            Page @Model.PageNumber of @Model.TotalPages
+        </span>
+    }
 
-    @if (Model.HasNextPage)
+    @if (Model != null
+        && Model.HasNextPage)
     {
         <a asp-action="Dashboard"
            asp-route-pageNumber="@(Model.PageNumber + 1)"

@@ -1,19 +1,27 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Task_Tracker_WebApp.Cache.Enums;
 
-namespace Task_Tracker_WebApp.Cache
+namespace Task_Tracker_WebApp.Use_Cases.Cache
 {
-    public class MemoryCacheHandler
+    public class MemoryCacheHandler : IMemoryCacheHandler
     {
         private readonly IMemoryCache _cache;
         private readonly MemoryCacheEntryOptions _options;
 
-        private readonly int slidingExpMins = 30;
-        private readonly int absoluteExpHours = 1;
-
-        public MemoryCacheHandler(IMemoryCache cache)
+        public MemoryCacheHandler
+            (IMemoryCache cache,
+            IConfiguration config)
         {
             _cache = cache;
+
+            int slidingExpMins;
+            if(!int.TryParse(config.GetSection("CacheSettings")["SlidingTimeInMinutes"], out slidingExpMins))
+                slidingExpMins = 30;
+
+            int absoluteExpHours;
+            if (!int.TryParse(config.GetSection("CacheSettings")["AbsoluteTimeInHours"], out absoluteExpHours))
+                absoluteExpHours = 1;
+
             _options = new MemoryCacheEntryOptions()
                     .SetSlidingExpiration(TimeSpan.FromMinutes(slidingExpMins))
                     .SetAbsoluteExpiration(TimeSpan.FromHours(absoluteExpHours));

@@ -1,7 +1,8 @@
 ﻿@model UserTaskViewModel
 
 <div class="container mt-4">
-    @if (Model.UserTask == null)
+    @if (Model == null
+        || Model.UserTask == null)
     {
         <h2 class="text-center">Create Task</h2>
     }
@@ -10,7 +11,8 @@
         <h2 class="text-center">Update Task</h2>
     }
 
-    @if(Model.UserTask == null)
+    @if(Model == null
+        || Model.UserTask == null)
     {
         <form id="CreateTaskForm" asp-action="Create" method="post">
             @Html.AntiForgeryToken()
@@ -52,7 +54,7 @@
             }
 
             <div class="mt-4">
-                <button type="submit" class="btn btn-create">
+                <button type="submit" class="btn btn-create w-100">
                     Create
                 </button>
             </div>
@@ -126,7 +128,7 @@
             }
 
             <div class="mt-4">
-                <button type="submit" class="btn btn-edit">
+                <button type="submit" class="btn btn-edit w-100">
                     Update
                 </button>
             </div>

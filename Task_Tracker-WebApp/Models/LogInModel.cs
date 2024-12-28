@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Task_Tracker_WebApp.Models.View
+namespace Task_Tracker_WebApp.Models
 {
-    public class LogInViewModel
+    public class LogInModel
     {
         [Required]
         [EmailAddress]
