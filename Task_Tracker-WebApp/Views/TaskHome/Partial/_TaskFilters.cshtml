@@ -1,0 +1,22 @@
+﻿<div class="justify-content-center text-center mt-4 fw-bold">
+    <p>Filters</p>
+</div>
+
+<div class="justify-content-center text-center mt-3">
+    <a asp-action="Dashboard" asp-route-filterNumber="0"
+       class="btn btn-dark me-2">
+        All Tasks
+    </a>
+    <a asp-action="Dashboard" asp-route-filterNumber="1"
+       class="btn btn-secondary me-2">
+        To-Do
+    </a>
+    <a asp-action="Dashboard" asp-route-filterNumber="2"
+       class="btn btn-primary me-2">
+        In-Progress
+    </a>
+    <a asp-action="Dashboard" asp-route-filterNumber="3"
+       class="btn btn-success">
+        Completed
+    </a>
+</div>

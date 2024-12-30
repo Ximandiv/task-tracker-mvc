@@ -1,0 +1,37 @@
+﻿@model TaskBulkViewModel
+
+<div id="bulkTaskForm">
+    <div class="text-center mt-4 fw-bold">
+        <p class="mb-3">Selected Actions</p>
+    </div>
+
+    <form method="post" asp-action="RemoveMany" asp-controller="TaskHome">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="selectedTaskIds" id="selected-task-ids-remove" />
+        <div class="d-flex justify-content-center align-items-center gap-3 mt-4">
+            <button type="button" class="btn btn-danger btn-sm" id="remove-selected-btn">Remove All</button>
+        </div>
+    </form>
+
+    <form method="post" asp-action="ChangeManyStatus" asp-controller="TaskHome">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="IdList" name="selectedTaskIds" id="selected-task-ids-status" />
+
+        <div class="d-flex flex-column justify-content-center align-items-center mt-4">
+            <div class="mb-3">
+                <label asp-for="Status"></label>
+                <select id="status-dropdown"
+                    class="form-select form-select-sm bg-dark text-light border-secondary"
+                    asp-for="Status"
+                    aria-label="Change Status">
+                    <option value="">-- Select Status --</option>
+                    <option value="To-Do">To-Do</option>
+                    <option value="In-Progress">In-Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-sm mt-2" id="change-status-selected-btn">Apply</button>
+        </div>
+    </form>
+</div>

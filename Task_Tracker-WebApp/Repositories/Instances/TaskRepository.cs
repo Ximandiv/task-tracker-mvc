@@ -30,5 +30,18 @@ namespace Task_Tracker_WebApp.Repositories.Instances
             => await _context.Tasks
                                 .AsNoTracking()
                                 .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+        public async Task<IEnumerable<UserTask>?> GetManyByIdAndUser
+            (IEnumerable<int> idList, int userId)
+            => await _context.Tasks
+                            .AsNoTracking()
+                            .Where(t => idList.Contains(t.Id))
+                            .ToListAsync();
+
+        public void UpdateManyStatus(IEnumerable<UserTask> taskList, string status)
+            => taskList.ToList().ForEach(t => t.Status = status);
+
+        public void RemoveMany(IEnumerable<UserTask> taskList)
+            => _context.Tasks.RemoveRange(taskList);
     }
 }

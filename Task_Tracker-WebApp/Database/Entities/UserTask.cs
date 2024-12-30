@@ -50,6 +50,8 @@ public class UserTask
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void UpdateStatus(string status) => Status = status;
+
     public UserTaskModel ToModel()
         => new UserTaskModel(this);
 }

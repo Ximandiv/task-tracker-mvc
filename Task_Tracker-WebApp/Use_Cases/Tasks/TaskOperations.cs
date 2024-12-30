@@ -25,8 +25,10 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
             try
             {
                 await _unitOfWork.BeginTransaction();
+
                 await _unitOfWork.Tasks.Add(userTask);
                 await _unitOfWork.SaveChanges();
+
                 await _unitOfWork.CommitTransaction();
             }
             catch (Exception ex)
@@ -67,8 +69,10 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
                 userTask.Update(userTaskModel);
 
                 await _unitOfWork.BeginTransaction();
+
                 _unitOfWork.Tasks.Update(userTask);
                 await _unitOfWork.SaveChanges();
+
                 await _unitOfWork.CommitTransaction();
             }
             catch (Exception ex)
@@ -99,8 +103,10 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
             try
             {
                 await _unitOfWork.BeginTransaction();
+
                 _unitOfWork.Tasks.Delete(userTask!);
                 await _unitOfWork.SaveChanges();
+
                 await _unitOfWork.CommitTransaction();
             }
             catch(Exception ex)

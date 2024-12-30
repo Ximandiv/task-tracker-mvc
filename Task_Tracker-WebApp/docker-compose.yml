@@ -1,0 +1,41 @@
+services:
+  # ASP.NET application container
+  webapp:
+    image: task_tracker_webapp # The name of your app's image
+    build: .
+    ports:
+      - "5283:8080"  # Expose the app's port
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - JwtSettings__SecretKey=${JWTSETTINGS__SECRETKEY}  # Inject JWT SecretKey
+      - JwtSettings__Issuer=${JWTSETTINGS__ISSUER}  # Inject JWT Issuer
+      - JwtSettings__Audience=${JWTSETTINGS__AUDIENCE}  # Inject JWT Audience
+      - JwtSettings__ExpirationInMinutes=${JWTSETTINGS__EXPIRATIONINMINUTES}  # Inject JWT ExpirationInMinutes
+      - JwtSettings__RememberExpInMonths=${JWTSETTINGS__REMEMBEREXPINMONTHS}  # Inject JWT RememberExpInMonths
+      - ConnectionStrings__Test=${CONNECTIONSTRINGS__TEST}  # Inject Connection String
+      - CacheSettings__SlidingTimeInMinutes=${CACHESETTINGS__SLIDINGTIMEINMINUTES}  # Inject Cache SlidingTime
+      - CacheSettings__AbsoluteTimeInHours=${CACHESETTINGS__ABSOLUTETIMEINHOURS}  # Inject Cache AbsoluteTime
+    depends_on:
+        mydb:
+            condition: service_healthy
+
+  mydb:
+    image: mysql:8.0  # MySQL Docker image
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB__PASSWORD}
+      - MYSQL_DATABASE=${DB__DATABASE}
+      - MYSQL_USER=${DB__USER__USERNAME}
+      - MYSQL_PASSWORD=${DB__USER__PASSWORD}
+    ports:
+      - "3307:3306"  # Expose MySQL port
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+        test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+        interval: 30s
+        retries: 5
+        start_period: 30s
+        timeout: 10s
+
+volumes:
+  mysql-data:

@@ -20,6 +20,8 @@
             <a asp-action="Create" class="btn btn-success">Create Task</a>
         </div>
 
+        <partial name="Partial/_TaskFilters" />
+
         @if (ViewData["SuccessOperation"] != null)
         {
             <div class="justify-content-center text-center mt-4">

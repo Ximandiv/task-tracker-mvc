@@ -8,27 +8,27 @@
 
         @if (ViewData["SignInMessage"] != null)
         {
-            <span>@ViewData["SignInMessage"]</span>
+            <p class="text-center mb-4 text-success">@ViewData["SignInMessage"]</p>
         }
 
         <form asp-action="Login" asp-controller="Auth" method="post">
             @Html.AntiForgeryToken()
 
             <div class="mb-4">
-                <label asp-for="User!.Email" class="text-light"></label>
+                <label asp-for="User!.Email" class="text-light mb-2"></label>
                 <input type="email" placeholder="Email" asp-for="User!.Email" class="form-control" required />
                 <span asp-validation-for="User!.Email"></span>
             </div>
 
             <div action="mb-4">
-                <label asp-for="User!.Password" class="text-light"></label>
+                <label asp-for="User!.Password" class="text-light mb-2"></label>
                 <input type="password" placeholder="Password" asp-for="User!.Password" class="form-control" required />
                 <span asp-validation-for="User!.Password"></span>
             </div>
 
             <div class="form-check mt-4 mb-4">
-                <input asp-for="User!.RememberMe" class="form-check-input" />
                 <label asp-for="User!.RememberMe" class="form-check-label text-light">Remember Me</label>
+                <input asp-for="User!.RememberMe" class="form-check-input" />
             </div>
 
             <button type="submit" class="btn btn-dark">Log-In</button>
@@ -36,7 +36,7 @@
 
         @if (ViewData["ErrorLogin"] != null)
         {
-            <span>@ViewData["ErrorLogin"]</span>
+            <span class="justify-content-center text-center text-danger mt-4">@ViewData["ErrorLogin"]</span>
         }
 
         <p class="text-light">Don't have an account? <a asp-area="" asp-controller="Auth" asp-action="SignIn">Sign up</a></p>

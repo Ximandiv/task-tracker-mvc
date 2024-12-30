@@ -5,6 +5,8 @@ using Task_Tracker_WebApp.Models;
 using Task_Tracker_WebApp.Use_Cases.Auth.Models;
 using Task_Tracker_WebApp.Use_Cases.Cache;
 using Task_Tracker_WebApp.Repositories.Interfaces;
+using Task_Tracker_WebApp.Use_Cases.Tasks.Validators;
+using System.Threading.Tasks;
 
 namespace Task_Tracker_WebApp.Use_Cases.Tasks
 {
@@ -16,66 +18,58 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMemoryCacheHandler _cacheHandler = cacheHandler;
         private readonly ILogger<TaskRetrieval> _logger = logger;
+        private readonly int pageOffset = 1;
+
+        public async Task<UserTaskListViewModel?> GetUserTasksByFilter
+            (AuthorizedUser user,
+            int pageNumber,
+            int filterNumber)
+        {
+            if (!TaskStatusValidator.ValidStatus(filterNumber, out string statusFilter))
+                return await GetAllUserTasks(user, pageNumber);
+
+            IEnumerable<UserTask>? taskList = await retrieveUserTasks(user.Id!.Value);
+
+            IEnumerable<UserTaskModel> taskResponseList
+                = taskList!
+                    .Where(t => t.Status == statusFilter)
+                    .Select(t => t.ToModel())
+                    .ToList();
+            int totalTasks = taskResponseList.Count();
+
+            taskResponseList = taskResponseList
+                .Skip((pageNumber - pageOffset) * TaskLimitValidation.DashboardPageSize)
+                .Take(TaskLimitValidation.DashboardPageSize)
+                .ToList();
+
+            return buildListViewModel(taskResponseList, pageNumber, totalTasks);
+        }
 
         public async Task<UserTaskListViewModel?> GetAllUserTasks
             (AuthorizedUser user,
             int pageNumber)
         {
-            IEnumerable<UserTaskModel> taskResponseList;
-            IEnumerable<UserTask>? taskList;
-            try
-            {
-                if (!_cacheHandler.Get(CachePrefix.UserTaskList,
-                                user.Id!.ToString()!,
-                                out taskList))
-                {
-                    taskList = await _unitOfWork.Tasks.GetAllUserTasks(user.Id.Value);
+            IEnumerable<UserTask>? taskList = await retrieveUserTasks(user.Id!.Value);
 
-                    _cacheHandler.Set(CachePrefix.UserTaskList,
-                                    user.Id!.ToString()!,
-                                    taskList);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while getting User's tasks");
-                throw;
-            }
+            IEnumerable<UserTaskModel> taskResponseList
+                = taskList!
+                    .Select(t => t.ToModel())
+                    .ToList();
+            int totalTasks = taskResponseList.Count();
 
-            if (taskList == null
-                || taskList.Count() == 0)
-                return null;
+            taskResponseList = taskResponseList
+                .Skip((pageNumber - pageOffset) * TaskLimitValidation.DashboardPageSize)
+                .Take(TaskLimitValidation.DashboardPageSize)
+                .ToList();
 
-            taskResponseList = taskList!
-                                    .Select(t => t.ToModel())
-                                    .Skip((pageNumber - 1) * TaskLimitValidation.DashboardPageSize)
-                                    .Take(TaskLimitValidation.DashboardPageSize)
-                                    .ToList();
-
-            int totalTasks = taskList!.Count();
-            int totalPages = calculateTotalPages(totalTasks, TaskLimitValidation.DashboardPageSize);
-
-            return new UserTaskListViewModel
-                    (taskResponseList,
-                    pageNumber,
-                    TaskLimitValidation.DashboardPageSize,
-                    totalPages,
-                    totalTasks);
+            return buildListViewModel(taskResponseList, pageNumber, totalTasks);
         }
 
         public async Task<UserTaskViewModel?> GetByIdAndUser
             (int taskId,
             int userId)
         {
-            if (!_cacheHandler.Get(CachePrefix.UserTask, $"{userId}_{taskId}", out UserTask? userTask))
-            {
-                userTask = await _unitOfWork.Tasks.GetByIdAndUser(taskId, userId);
-
-                if (userTask == null)
-                    return null;
-
-                _cacheHandler.Set(CachePrefix.UserTask, $"{userId}_{taskId}", userTask);
-            }
+            UserTask? userTask = await getEntityByIdAndUser(taskId, userId);
 
             if (userTask == null) return null;
 
@@ -84,7 +78,8 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
                 UserTask = new UserTaskModel(userTask)
             };
         }
-        public async Task<bool> isTitleDuplicate
+
+        public async Task<bool> IsTitleDuplicate
                     (AuthorizedUser user,
                     string title)
         {
@@ -103,5 +98,57 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
             (int totalTasks,
             double dashboardPageSize)
             => (int)Math.Ceiling(totalTasks / dashboardPageSize);
+
+        private UserTaskListViewModel buildListViewModel
+            (IEnumerable<UserTaskModel> taskResponseList,
+            int pageNumber,
+            int totalTasks)
+            => new UserTaskListViewModel
+                    (taskResponseList,
+                    pageNumber,
+                    TaskLimitValidation.DashboardPageSize,
+                    calculateTotalPages(totalTasks, TaskLimitValidation.DashboardPageSize),
+                    totalTasks);
+
+        private async Task<IEnumerable<UserTask>?> retrieveUserTasks
+            (int userId)
+        {
+            IEnumerable<UserTask>? taskList;
+            try
+            {
+                if (!_cacheHandler.Get(CachePrefix.UserTaskList,
+                                userId.ToString(),
+                                out taskList))
+                {
+                    taskList = await _unitOfWork.Tasks.GetAllUserTasks(userId);
+
+                    _cacheHandler.Set(CachePrefix.UserTaskList,
+                                    userId.ToString(),
+                                    taskList);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while getting User's tasks");
+                throw;
+            }
+
+            return taskList;
+        }
+
+        private async Task<UserTask?> getEntityByIdAndUser(int taskId, int userId)
+        {
+            if (!_cacheHandler.Get(CachePrefix.UserTask, $"{userId}_{taskId}", out UserTask? userTask))
+            {
+                userTask = await _unitOfWork.Tasks.GetByIdAndUser(taskId, userId);
+
+                if (userTask == null)
+                    return null;
+
+                _cacheHandler.Set(CachePrefix.UserTask, $"{userId}_{taskId}", userTask);
+            }
+
+            return userTask;
+        }
     }
 }

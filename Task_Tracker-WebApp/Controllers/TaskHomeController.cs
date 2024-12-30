@@ -10,16 +10,20 @@ namespace Task_Tracker_WebApp.Controllers
     public class TaskHomeController
         (CredentialsHandler authService,
         TaskOperations taskOps,
+        TaskBulkOperations taskBulkOps,
         TaskRetrieval taskRetrieval,
         ILogger<TaskHomeController> logger) : Controller
     {
         private readonly ILogger<TaskHomeController> _logger = logger;
         private readonly CredentialsHandler _authService = authService;
         private readonly TaskOperations _taskOperations = taskOps;
+        private readonly TaskBulkOperations _taskBulkOperations = taskBulkOps;
         private readonly TaskRetrieval _taskRetrieval = taskRetrieval;
 
         [HttpGet]
-        public async Task<IActionResult> Dashboard(int pageNumber = 1)
+        public async Task<IActionResult> Dashboard
+            (int pageNumber = 1,
+            int filterNumber = 0)
         {
             var authUser = _authService.GetAuthUser(User);
 
@@ -35,7 +39,13 @@ namespace Task_Tracker_WebApp.Controllers
             UserTaskListViewModel? viewModelResult;
             try
             {
-                viewModelResult = await _taskRetrieval.GetAllUserTasks(authUser, pageNumber);
+                if (filterNumber == 0)
+                    viewModelResult = await _taskRetrieval.GetAllUserTasks(authUser, pageNumber);
+                else
+                {
+                    pageNumber = 1;
+                    viewModelResult = await _taskRetrieval.GetUserTasksByFilter(authUser, pageNumber, filterNumber);
+                }
             }
             catch(Exception ex)
             {
@@ -91,7 +101,7 @@ namespace Task_Tracker_WebApp.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            if (await _taskRetrieval.isTitleDuplicate(authUser, taskViewModel.UserTask!.Title))
+            if (await _taskRetrieval.IsTitleDuplicate(authUser, taskViewModel.UserTask!.Title))
             {
                 ViewData["GeneralError"] = "A Task with the same Title was found";
                 return View(taskViewModel);
@@ -210,6 +220,126 @@ namespace Task_Tracker_WebApp.Controllers
 
             TempData["SuccessOperation"] = "Task was successfully removed";
             return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveMany(string taskIdList)
+        {
+            var authUser = _authService.GetAuthUser(User);
+
+            if (!authUser.Valid)
+            {
+                _logger.LogWarning(
+                    @$"User tried to get in dashboard with invalid auth values");
+
+                TempData["AuthError"] = "Unauthorized access";
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (string.IsNullOrEmpty(taskIdList))
+            {
+                TempData["DeleteError"] = "Selected Tasks to remove are invalid";
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+            }
+
+            var taskIdListParsed = taskIdList.Split(',')
+                                            .Select(id => {
+                                                int parsedId;
+                                                return int.TryParse(id, out parsedId) ? (int?)parsedId : null;
+                                            })
+                                             .Where(id => id.HasValue)
+                                             .Select(id => id!.Value)
+                                             .ToList();
+
+            if (!taskIdListParsed.Any())
+            {
+                TempData["DeleteError"] = "Selected ids to remove are invalid";
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+            }
+
+            try
+            {
+                bool successOperation = await _taskBulkOperations.RemoveMany(taskIdListParsed, authUser.Id!.Value);
+
+                if (!successOperation)
+                {
+                    TempData["DeleteError"] = "Remove operation had an error. Make sure the Tasks are valid.";
+                    return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+                }
+
+                TempData["SuccessOperation"] = "Tasks Selected were successfully removed";
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred in endpoint POST .../TaskHome/RemoveMany");
+
+                TempData["DeleteError"] = "Remove operation had a fatal error";
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangeManyStatus
+            (TaskBulkViewModel viewModel)
+        {
+            var authUser = _authService.GetAuthUser(User);
+
+            if (!authUser.Valid)
+            {
+                _logger.LogWarning(
+                    @$"User tried to get in dashboard with invalid auth values");
+
+                TempData["AuthError"] = "Unauthorized access";
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (string.IsNullOrEmpty(viewModel.IdList))
+            {
+                TempData["DeleteError"] = "Selected Tasks to update are invalid";
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+            }
+
+            var taskIdListParsed = viewModel.IdList.Split(',')
+                                                .Select(id => {
+                                                    int parsedId;
+                                                    return int.TryParse(id, out parsedId) ? (int?)parsedId : null;
+                                                })
+                                                 .Where(id => id.HasValue)
+                                                 .Select(id => id!.Value)
+                                                 .ToList();
+
+            if (!taskIdListParsed.Any())
+            {
+                TempData["DeleteError"] = "Selected ids to remove are invalid";
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+            }
+
+            try
+            {
+                bool successOperation = await _taskBulkOperations
+                                                .UpdateManyStatus
+                                                (taskIdListParsed, authUser.Id!.Value, viewModel.Status!);
+
+                if (!successOperation)
+                {
+                    TempData["DeleteError"] = @"Status update operation had an error. 
+                                                Make sure you are not changing it to the same status.";
+                    return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+                }
+
+                TempData["SuccessOperation"] = "Tasks Selected were successfully removed";
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred in endpoint POST .../TaskHome/RemoveMany");
+
+                TempData["DeleteError"] = "Remove operation had a fatal error";
+                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+            }
         }
     }
 }

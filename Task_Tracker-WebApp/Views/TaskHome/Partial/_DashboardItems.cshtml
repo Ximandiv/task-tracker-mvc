@@ -11,7 +11,7 @@
             <p class="card-text">@Model.Description</p>
 
             <p>
-                Status:
+                <strong>Status:</strong>
                 @if (Model.Status == "To-Do")
                 {
                     <span class="badge bg-secondary">@Model.Status</span>
@@ -26,24 +26,22 @@
                 }
             </p>
 
-            <p>Created: @Model.CreatedDate.ToString("yyyy-MM-dd")</p>
+            <p> <strong> Created: </strong> @Model.CreatedDate.ToString("yyyy-MM-dd")</p>
 
-            <p>Updated: @Model.UpdatedDate.ToString("yyyy-MM-dd")</p>
+            <p> <strong> Updated: </strong> @Model.UpdatedDate.ToString("yyyy-MM-dd")</p>
 
-            <div class="d-flex justify-content-evenly mt-4" id="forms-container">
+            <div class="d-flex justify-content-evenly mt-4 task-controls">
 
-                <div class="w-50 text-center" id="edit-form">
+                <div class="w-50 text-center">
                     <a asp-action="Edit"
                         asp-route-taskId="@Model.Id"
-                        class="btn btn-edit btn-sm"
-                        id="Edit-Btn"
-                        data-id="@Model.Id">
+                        class="btn btn-edit btn-sm edit-btn">
                         Edit
                     </a>
                 </div>
 
                 <form id="remove-form"
-                        class="w-50 text-center"
+                        class="w-50 text-center remove-form"
                         method="post"
                         asp-action="Remove"
                         asp-controller="TaskHome"
@@ -51,7 +49,7 @@
                         asp-route-pageNumber="@ViewData["ActualPage"]">
                     @Html.AntiForgeryToken()
                     <div id="Remove-Section">
-                        <button type="button" class="btn btn-remove btn-sm" id="Remove-Btn">Remove</button>
+                        <button type="button" class="btn btn-remove btn-sm remove-btn" id="Remove-Btn">Remove</button>
                     </div>
                 </form>
 

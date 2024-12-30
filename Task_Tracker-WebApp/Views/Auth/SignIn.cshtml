@@ -5,22 +5,30 @@
 <div class="signin-container">
     <div class="form-container">
         <h2>Sign Up</h2>
+
+        <p class="text-center mb-4">
+            Before creating your account, please take a moment to review our 
+            <a asp-action="Privacy" asp-controller="Home" class="text-primary fw-bold text-decoration-none">
+                Privacy Policy
+            </a>
+        </p>
+
         <form asp-action="SignIn" method="post">
             @Html.AntiForgeryToken()
             <div class="mb-4">
-                <label asp-for="User!.Username" class="text-light"></label>
+                <label asp-for="User!.Username" class="text-light mb-2"></label>
                 <input type="text" placeholder="Username" asp-for="User!.Username" class="form-control" required />
                 <span asp-validation-for="User!.Username"></span>
             </div>
 
             <div class="mb-4">
-                <label asp-for="User!.Email" class="text-light"></label>
+                <label asp-for="User!.Email" class="text-light mb-2"></label>
                 <input type="email" placeholder="Email" asp-for="User!.Email" class="form-control" required />
                 <span asp-validation-for="User!.Email"></span>
             </div>
 
             <div class="mb-4">
-                <label asp-for="User!.Password" class="text-light"></label>
+                <label asp-for="User!.Password" class="text-light mb-2"></label>
                 <input type="password" placeholder="Password" asp-for="User!.Password" class="form-control" required />
                 <span asp-validation-for="User!.Password"></span>
             </div>

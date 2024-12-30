@@ -7,5 +7,8 @@ namespace Task_Tracker_WebApp.Repositories.Interfaces
         Task<IEnumerable<UserTask>?> GetAllUserTasks(int userId);
         Task<bool> IsTaskTitleDuplicate(int userId, string title);
         Task<UserTask?> GetByIdAndUser(int id, int userId);
+        void UpdateManyStatus(IEnumerable<UserTask> taskList, string status);
+        void RemoveMany(IEnumerable<UserTask> taskList);
+        Task<IEnumerable<UserTask>?> GetManyByIdAndUser(IEnumerable<int> idList, int userId);
     }
 }

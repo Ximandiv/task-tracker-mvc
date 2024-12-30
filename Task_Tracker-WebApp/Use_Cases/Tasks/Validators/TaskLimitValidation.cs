@@ -1,4 +1,4 @@
-﻿namespace Task_Tracker_WebApp.Use_Cases.Tasks
+﻿namespace Task_Tracker_WebApp.Use_Cases.Tasks.Validators
 {
     public static class TaskLimitValidation
     {

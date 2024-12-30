@@ -13,7 +13,8 @@
         <div style="width: 75px;"></div>
     }
 
-    @if(Model != null)
+    @if(Model != null
+        && Model.TotalPages > 0)
     {
         <span class="text-center position-absolute start-50 translate-middle-x" id="pageNumbers">
             Page @Model.PageNumber of @Model.TotalPages

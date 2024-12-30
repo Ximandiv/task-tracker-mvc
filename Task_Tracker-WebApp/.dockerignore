@@ -1,0 +1,15 @@
+# Exclude build outputs
+bin/
+obj/
+
+# Exclude IDE and user-specific files
+*.user
+*.vs
+.vscode/
+
+# Exclude system files and configurations
+.DS_Store
+Thumbs.db
+
+# Exclude other common temp files
+.idea/

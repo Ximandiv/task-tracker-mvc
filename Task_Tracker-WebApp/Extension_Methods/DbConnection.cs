@@ -22,4 +22,22 @@ public static class DbConnection
         services.AddDbContext<TaskContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
     }
+
+    public static void MigrateDB(this IServiceProvider serviceProvider)
+    {
+        using (var scope = serviceProvider.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+            var dbContext = services.GetRequiredService<TaskContext>();
+
+            try
+            {
+                dbContext.Database.Migrate();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred applying the migrations: {ex.Message}");
+            }
+        }
+    }
 }

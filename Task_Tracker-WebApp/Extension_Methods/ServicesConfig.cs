@@ -23,8 +23,10 @@ namespace Task_Tracker_WebApp.Extension_Methods
 
             services.AddScoped<TokenHandler>();
             services.AddScoped<CredentialsHandler>();
+
             services.AddScoped<TaskRetrieval>();
             services.AddScoped<TaskOperations>();
+            services.AddScoped<TaskBulkOperations>();
         }
 
         public static void AddCacheHandler(this IServiceCollection services)

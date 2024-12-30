@@ -1,70 +1,75 @@
-﻿const editContainer = document.getElementById("edit-form");
+﻿document.addEventListener("DOMContentLoaded", () => {
+    const tasks = document.querySelectorAll(".task");
 
-document.getElementById("Remove-Btn").addEventListener("click", event => confirm(event));
+    const taskGroups = Array.from(tasks).map((task, index) => {
+        return {
+            taskIndex: index,
+            taskElement: task,
+            editBtn: task.querySelector(".edit-btn"),
+            removeBtn: task.querySelector(".remove-btn"),
+            form: task.querySelector(".remove-form")
+        }
+    });
 
-function confirm(event) {
+    taskGroups.forEach((taskGroup) => {
+        const { removeBtn } = taskGroup;
+
+        removeBtn.addEventListener("click", (event) => confirm(event, taskGroup));
+    });
+})
+
+function confirm(event, taskGroup) {
     event.preventDefault();
 
-    const removeBtn = document.getElementById("Remove-Btn");
+    const { taskElement, editBtn, form } = taskGroup;
 
-    const container = document.getElementById("Remove-Section");
+    editBtn.parentNode.style.display = "none";
+    form.style.display = "none";
 
-    const sureTxt = document.createElement("p");
-    sureTxt.textContent = "Are you sure you want to delete this task?";
+    const controlsContainer = taskElement.querySelector(".task-controls");
 
     const btnContainer = document.createElement("div");
-    btnContainer.classList.add("d-flex", "justify-content-evenly");
+    btnContainer.id = "btn-confirmation";
+    btnContainer.classList.add("d-flex", "flex-column", "align-items-center", "gap-3");
 
-    const sureBtn = document.createElement("button");
-    sureBtn.type = "submit";
-    sureBtn.classList.add("btn", "btn-success", "btn-sm", "btn-warn");
-    sureBtn.textContent = "Yes";
+    const confirmationText = document.createElement("p");
+    confirmationText.id = "confirmation";
+    confirmationText.textContent = "Are you sure you want to delete this task?";
+    confirmationText.classList.add("text-center", "mb-2");
+
+    const buttonRow = document.createElement("div");
+    buttonRow.classList.add("d-flex", "justify-content-between", "w-100", "gap-2");
+
+    const confirmBtn = document.createElement("button");
+    confirmBtn.type = "submit";
+    confirmBtn.classList.add("btn", "btn-success", "btn-sm", "w-50");
+    confirmBtn.textContent = "Yes";
 
     const cancelBtn = document.createElement("button");
     cancelBtn.type = "button";
-    cancelBtn.classList.add("btn", "btn-sm", "btn-cancel");
+    cancelBtn.classList.add("btn", "btn-sm", "btn-cancel", "w-50");
     cancelBtn.textContent = "No";
 
-    const taskId = document.getElementById("Edit-Btn").dataset.id;
+    buttonRow.appendChild(confirmBtn);
+    buttonRow.appendChild(cancelBtn);
 
-    const form = document.getElementById("remove-form");
-    form.classList.remove("w-50");
-    form.classList.add("w-100");
+    btnContainer.appendChild(confirmationText);
+    btnContainer.appendChild(buttonRow);
 
-    removeBtn.removeEventListener("click", (event) => confirm(event, container));
-    removeBtn.remove();
-    editContainer.style.display = "none";
+    controlsContainer.appendChild(btnContainer);
 
-    btnContainer.appendChild(sureBtn);
-    btnContainer.appendChild(cancelBtn);
-    container.appendChild(sureTxt);
-    container.appendChild(btnContainer);
-
-    cancelBtn.addEventListener("click", (event) => abort(event, container, cancelBtn, taskId));
+    confirmBtn.addEventListener("click", () => form.submit());
+    cancelBtn.addEventListener("click", () => abort(taskGroup, controlsContainer, cancelBtn));
 }
 
-function abort(event, container, cancelBtn, taskId) {
-    event.preventDefault();
+function abort(taskGroup, controlsContainer, cancelBtn) {
+    const { editBtn, form } = taskGroup;
 
-    container.replaceChildren();
+    cancelBtn.removeEventListener("click", () => abort(taskGroup, controlsContainer, cancelBtn));
 
-    const form = document.getElementById("remove-form");
-    form.classList.remove("w-100");
-    form.classList.add("w-50");
+    controlsContainer.querySelector("#confirmation").remove();
+    controlsContainer.querySelector("#btn-confirmation").remove();
 
-    const removeSection = document.getElementById("Remove-Section");
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.classList.add("btn", "btn-remove", "btn-sm");
-    removeBtn.id = "Remove-Btn";
-    removeBtn.textContent = "Remove";
-
-    removeSection.appendChild(removeBtn);
-
-    editContainer.style = "";
-
-    removeBtn.addEventListener("click", event => confirm(event));
-
-    cancelBtn.removeEventListener("click", event => abort(event));
+    editBtn.parentNode.style.display = "block";
+    form.style.display = "block";
 }
