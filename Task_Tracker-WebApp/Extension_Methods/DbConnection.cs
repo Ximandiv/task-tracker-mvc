@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 using Task_Tracker_WebApp.Database;
+using Task_Tracker_WebApp.Use_Cases.Cache;
 
 namespace Task_Tracker_WebApp.Extension_Methods;
 
@@ -21,6 +23,18 @@ public static class DbConnection
     {
         services.AddDbContext<TaskContext>(options =>
             options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    }
+
+    public static void AddRedisCache(this IServiceCollection services,
+                                    IConfiguration config)
+    {
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var connectionString = config.GetSection("CacheSettings")["ConnectionString"]!;
+            return ConnectionMultiplexer.Connect(connectionString);
+        });
+
+        services.AddSingleton<ICacheHandler, CacheHandler>();
     }
 
     public static void MigrateDB(this IServiceProvider serviceProvider)

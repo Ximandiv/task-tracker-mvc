@@ -8,15 +8,16 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks.Validators
         {
             switch (statusNumber)
             {
-                case (int)UserTaskStatus.ToDo :
+                case (int)UserTaskStatus.ToDo:
                     status = "To-Do";
                     return true;
-                case (int)UserTaskStatus.InProgress :
+                case (int)UserTaskStatus.InProgress:
                     status = "In-Progress";
                     return true;
-                case (int)UserTaskStatus.Complete :
+                case (int)UserTaskStatus.Complete:
                     status = "Completed";
                     return true;
+                case (int)UserTaskStatus.Unknown:
                 default:
                     status = "N/A";
                     return false;

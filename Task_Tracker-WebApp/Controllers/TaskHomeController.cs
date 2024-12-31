@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Task_Tracker_WebApp.Models.ViewModel;
 using Task_Tracker_WebApp.Use_Cases.Auth;
 using Task_Tracker_WebApp.Use_Cases.Tasks;
+using Task_Tracker_WebApp.Use_Cases.Tasks.Enum;
 
 namespace Task_Tracker_WebApp.Controllers
 {
@@ -10,49 +11,34 @@ namespace Task_Tracker_WebApp.Controllers
     public class TaskHomeController
         (CredentialsHandler authService,
         TaskOperations taskOps,
-        TaskBulkOperations taskBulkOps,
         TaskRetrieval taskRetrieval,
         ILogger<TaskHomeController> logger) : Controller
     {
         private readonly ILogger<TaskHomeController> _logger = logger;
         private readonly CredentialsHandler _authService = authService;
         private readonly TaskOperations _taskOperations = taskOps;
-        private readonly TaskBulkOperations _taskBulkOperations = taskBulkOps;
         private readonly TaskRetrieval _taskRetrieval = taskRetrieval;
 
         [HttpGet]
         public async Task<IActionResult> Dashboard
             (int pageNumber = 1,
-            int filterNumber = 0)
+            int filterNumber = (int)UserTaskStatus.Unknown)
         {
             var authUser = _authService.GetAuthUser(User);
 
             if (!authUser.Valid)
-            {
-                _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values");
+                return kickUnauthorized();
 
-                TempData["AuthError"] = "Unauthorized access";
-                return RedirectToAction("Index", "Home");
-            }
-
-            UserTaskListViewModel? viewModelResult;
+            UserTaskListViewModel? viewModelResult = null;
             try
             {
-                if (filterNumber == 0)
-                    viewModelResult = await _taskRetrieval.GetAllUserTasks(authUser, pageNumber);
-                else
-                {
-                    pageNumber = 1;
-                    viewModelResult = await _taskRetrieval.GetUserTasksByFilter(authUser, pageNumber, filterNumber);
-                }
+                viewModelResult = await _taskRetrieval.GetUserTasksByFilter(authUser, pageNumber, filterNumber);
             }
             catch(Exception ex)
             {
-                _logger.LogError(ex, "An error occurred in GET endpoint .../TaskHome/Dashboard");
-
-                ViewData["AuthError"] = "An error occurred during task retrieval";
-                return RedirectToAction("Index", "Home");
+                return redirectError<string>(ex, 
+                                $"GET /TaskHome/Dashboard?pageNumber={pageNumber}&filterNumber={filterNumber}",
+                                "Error during Dashboard Task List retrieval");
             }
 
             TempData["ActualPage"] = pageNumber;
@@ -70,13 +56,7 @@ namespace Task_Tracker_WebApp.Controllers
             var authUser = _authService.GetAuthUser(User);
 
             if (!authUser.Valid)
-            {
-                _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values");
-
-                TempData["AuthError"] = "Unauthorized access";
-                return RedirectToAction("Index", "Home");
-            }
+                return kickUnauthorized();
 
             ViewData["Username"] = authUser.UserName;
 
@@ -93,13 +73,7 @@ namespace Task_Tracker_WebApp.Controllers
             var authUser = _authService.GetAuthUser(User);
 
             if (!authUser.Valid)
-            {
-                _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values");
-
-                TempData["AuthError"] = "Unauthorized access";
-                return RedirectToAction("Index", "Home");
-            }
+                return kickUnauthorized();
 
             if (await _taskRetrieval.IsTitleDuplicate(authUser, taskViewModel.UserTask!.Title))
             {
@@ -113,10 +87,12 @@ namespace Task_Tracker_WebApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $@"An error occurred in endpoint CREATE ../TaskHome/Create");
-
-                ViewData["GeneralError"] = "An error occurred during Task Creation";
-                return View(taskViewModel);
+                return redirectError(ex,
+                            "POST /TaskHome/Create",
+                            "An error occurred during Task Creation",
+                            nameof(Create),
+                            "GeneralError",
+                            taskViewModel);
             }
 
             TempData["SuccessOperation"] = "Task was successfully created";
@@ -129,13 +105,7 @@ namespace Task_Tracker_WebApp.Controllers
             var authUser = _authService.GetAuthUser(User);
 
             if (!authUser.Valid)
-            {
-                _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values");
-
-                TempData["AuthError"] = "Unauthorized access";
-                return RedirectToAction("Index", "Home");
-            }
+                return kickUnauthorized();
 
             var viewModel = await _taskRetrieval.GetByIdAndUser(taskId, authUser.Id!.Value);
 
@@ -153,13 +123,7 @@ namespace Task_Tracker_WebApp.Controllers
             var authUser = _authService.GetAuthUser(User);
 
             if (!authUser.Valid)
-            {
-                _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values");
-
-                TempData["AuthError"] = "Unauthorized access";
-                return RedirectToAction("Index", "Home");
-            }
+                return kickUnauthorized();
 
             string error = string.Empty;
             try
@@ -168,10 +132,12 @@ namespace Task_Tracker_WebApp.Controllers
             }
             catch(Exception ex)
             {
-                _logger.LogError(ex, "An error occurred in endpoint POST .../TaskHome/Edit");
-                ViewData["GeneralError"] = "An error occurred during task edition";
-
-                return View(model);
+                return redirectError(ex,
+                    $"POST /TaskHome/Edit?taskId={model.UserTask!.Id}",
+                    "An error occurred during task edition",
+                    nameof(Edit),
+                    "GeneralError",
+                    model);
             }
 
             if(!string.IsNullOrEmpty(error))
@@ -191,13 +157,7 @@ namespace Task_Tracker_WebApp.Controllers
             var authUser = _authService.GetAuthUser(User);
 
             if (!authUser.Valid)
-            {
-                _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values");
-
-                TempData["AuthError"] = "Unauthorized access";
-                return RedirectToAction("Index", "Home");
-            }
+                return kickUnauthorized();
 
             string error = string.Empty;
             try
@@ -206,10 +166,14 @@ namespace Task_Tracker_WebApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred in endpoint POST .../TaskHome/Edit");
-                TempData["GeneralError"] = "An error occurred during task deletion";
-
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
+                return redirectError(ex,
+                    $"POST /TaskHome/Remove?taskId={taskId}",
+                    "An error occurred during task deletion",
+                    "TaskHome",
+                    "GeneralError",
+                    new { pageNumber = TempData["ActualPage"] },
+                    "Dashboard"
+                    );
             }
 
             if(!string.IsNullOrEmpty(error))
@@ -221,125 +185,42 @@ namespace Task_Tracker_WebApp.Controllers
             TempData["SuccessOperation"] = "Task was successfully removed";
             return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
         }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RemoveMany(string taskIdList)
+        
+        private IActionResult kickUnauthorized()
         {
-            var authUser = _authService.GetAuthUser(User);
-
-            if (!authUser.Valid)
-            {
-                _logger.LogWarning(
+            _logger.LogWarning(
                     @$"User tried to get in dashboard with invalid auth values");
 
-                TempData["AuthError"] = "Unauthorized access";
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (string.IsNullOrEmpty(taskIdList))
-            {
-                TempData["DeleteError"] = "Selected Tasks to remove are invalid";
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-            }
-
-            var taskIdListParsed = taskIdList.Split(',')
-                                            .Select(id => {
-                                                int parsedId;
-                                                return int.TryParse(id, out parsedId) ? (int?)parsedId : null;
-                                            })
-                                             .Where(id => id.HasValue)
-                                             .Select(id => id!.Value)
-                                             .ToList();
-
-            if (!taskIdListParsed.Any())
-            {
-                TempData["DeleteError"] = "Selected ids to remove are invalid";
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-            }
-
-            try
-            {
-                bool successOperation = await _taskBulkOperations.RemoveMany(taskIdListParsed, authUser.Id!.Value);
-
-                if (!successOperation)
-                {
-                    TempData["DeleteError"] = "Remove operation had an error. Make sure the Tasks are valid.";
-                    return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-                }
-
-                TempData["SuccessOperation"] = "Tasks Selected were successfully removed";
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-            }
-            catch(Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred in endpoint POST .../TaskHome/RemoveMany");
-
-                TempData["DeleteError"] = "Remove operation had a fatal error";
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-            }
+            TempData["AuthError"] = "Unauthorized access";
+            return RedirectToAction("Index", "Home");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ChangeManyStatus
-            (TaskBulkViewModel viewModel)
+        private IActionResult redirectError<T>
+            (Exception ex,
+            string endpoint,
+            string viewMsg,
+            string? viewName = null,
+            string? dataKey = null,
+            T? viewObject = null,
+            string? actionName = null) where T : class
         {
-            var authUser = _authService.GetAuthUser(User);
+            _logger.LogError(ex, $"An error occurred in {endpoint}");
 
-            if (!authUser.Valid)
+            if (viewName is not null
+                && actionName is not null)
             {
-                _logger.LogWarning(
-                    @$"User tried to get in dashboard with invalid auth values");
-
-                TempData["AuthError"] = "Unauthorized access";
-                return RedirectToAction("Index", "Home");
+                TempData[dataKey!] = viewMsg;
+                return RedirectToAction(actionName, viewName, viewObject);
+            }
+            else if(viewName is not null
+                && actionName is null)
+            {
+                ViewData[dataKey!] = viewMsg;
+                return View(viewName, viewObject);
             }
 
-            if (string.IsNullOrEmpty(viewModel.IdList))
-            {
-                TempData["DeleteError"] = "Selected Tasks to update are invalid";
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-            }
-
-            var taskIdListParsed = viewModel.IdList.Split(',')
-                                                .Select(id => {
-                                                    int parsedId;
-                                                    return int.TryParse(id, out parsedId) ? (int?)parsedId : null;
-                                                })
-                                                 .Where(id => id.HasValue)
-                                                 .Select(id => id!.Value)
-                                                 .ToList();
-
-            if (!taskIdListParsed.Any())
-            {
-                TempData["DeleteError"] = "Selected ids to remove are invalid";
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-            }
-
-            try
-            {
-                bool successOperation = await _taskBulkOperations
-                                                .UpdateManyStatus
-                                                (taskIdListParsed, authUser.Id!.Value, viewModel.Status!);
-
-                if (!successOperation)
-                {
-                    TempData["DeleteError"] = @"Status update operation had an error. 
-                                                Make sure you are not changing it to the same status.";
-                    return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-                }
-
-                TempData["SuccessOperation"] = "Tasks Selected were successfully removed";
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred in endpoint POST .../TaskHome/RemoveMany");
-
-                TempData["DeleteError"] = "Remove operation had a fatal error";
-                return RedirectToAction("Dashboard", new { pageNumber = TempData["ActualPage"] });
-            }
+            ViewData["AuthError"] = viewMsg;
+            return RedirectToAction("Index", "Home");
         }
     }
 }

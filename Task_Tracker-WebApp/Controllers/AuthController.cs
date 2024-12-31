@@ -21,7 +21,7 @@ namespace Task_Tracker_WebApp.Controllers
         {
             try
             {
-                string jWT = await _tokenHandler.GetRememberToken(Request);
+                string jWT = await _tokenHandler.GetJWTOnRememberToken(Request);
 
                 if (jWT != string.Empty)
                 {
@@ -94,8 +94,6 @@ namespace Task_Tracker_WebApp.Controllers
         {
             if(!ModelState.IsValid)
                 return View(userSignIn);
-
-            userSignIn.User!.Password = BCrypt.Net.BCrypt.HashPassword(userSignIn.User!.Password);
 
             try
             {

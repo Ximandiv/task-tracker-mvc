@@ -9,11 +9,11 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
 {
     public class TaskOperations
         (IUnitOfWork unitOfWork,
-        IMemoryCacheHandler cacheHandler,
+        ICacheHandler cacheHandler,
         ILogger<TaskOperations> logger)
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
-        private readonly IMemoryCacheHandler _cacheHandler = cacheHandler;
+        private readonly ICacheHandler _cacheHandler = cacheHandler;
         private readonly ILogger<TaskOperations> _logger = logger;
 
         public async Task Create
@@ -30,15 +30,15 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
                 await _unitOfWork.SaveChanges();
 
                 await _unitOfWork.CommitTransaction();
+
+                await _cacheHandler.Set(CachePrefix.UserTask, $"{authUser.Id}_{userTask.Id}", userTask);
+                await _cacheHandler.Remove(CachePrefix.UserTaskList, $"{authUser.Id}");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $@"An error occurred during a transaction in Task Creation");
                 throw;
             }
-
-            _cacheHandler.Set(CachePrefix.UserTask, $"{authUser.Id}_{userTask.Id}", userTask);
-            _cacheHandler.Remove(CachePrefix.UserTaskList, $"{authUser.Id}");
         }
 
         public async Task<string> Update
@@ -46,18 +46,13 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
             UserTaskModel userTaskModel
             )
         {
-            if (!_cacheHandler.Get
-                (CachePrefix.UserTask, 
-                $"{user.Id!.Value}_{userTaskModel.Id}", 
-                out UserTask? userTask))
-            {
-                userTask = await _unitOfWork.Tasks
-                                            .GetByIdAndUser(userTaskModel.Id!.Value, user.Id!.Value);
+            var userTask = await _cacheHandler.Get<UserTask>(CachePrefix.UserTask, $"{user.Id!.Value}_{userTaskModel.Id}")
+                ?? await _unitOfWork.Tasks
+                                        .GetByIdAndUser(userTaskModel.Id!.Value, user.Id!.Value); ;
 
-                if (userTask == null) return "Task not found";
+            if (userTask == null) return "Task not found";
 
-                _cacheHandler.Set(CachePrefix.UserTask, $"{user.Id!.Value}_{userTaskModel.Id}", userTask);
-            }
+            await _cacheHandler.Set(CachePrefix.UserTask, $"{user.Id!.Value}_{userTaskModel.Id}", userTask);
 
             if (userTaskModel.Title == userTask!.Title
                 && userTaskModel.Description == userTask!.Description
@@ -74,6 +69,11 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
                 await _unitOfWork.SaveChanges();
 
                 await _unitOfWork.CommitTransaction();
+
+                await _cacheHandler.Remove(CachePrefix.UserTask, $"{user.Id!.Value}_{userTaskModel.Id}");
+                await _cacheHandler.Remove(CachePrefix.UserTaskList, user.Id!.ToString()!);
+
+                return string.Empty;
             }
             catch (Exception ex)
             {
@@ -81,24 +81,16 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
                                 where id is {userTask.Id}");
                 throw;
             }
-
-            _cacheHandler.Remove(CachePrefix.UserTaskList, user.Id!.ToString()!);
-            _cacheHandler.Remove(CachePrefix.UserTask, $"{user.Id!}_{userTask.Id}");
-
-            return string.Empty;
         }
 
         public async Task<string> Remove
             (AuthorizedUser user,
             int taskId)
         {
-            if (!_cacheHandler.Get(CachePrefix.UserTask, $"{user.Id!.Value}_{taskId}", out UserTask? userTask))
-            {
-                userTask = await _unitOfWork.Tasks.GetByIdAndUser(taskId, user.Id!.Value);
-
-                if (userTask == null)
-                    return "Task to delete was not found";
-            }
+            var userTask = await _cacheHandler.Get<UserTask>(CachePrefix.UserTask, $"{user.Id!.Value}_{taskId}")
+                ?? await _unitOfWork.Tasks.GetByIdAndUser(taskId, user.Id!.Value);
+            if (userTask is null)
+                return "Task to delete was not found";
 
             try
             {
@@ -108,6 +100,11 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
                 await _unitOfWork.SaveChanges();
 
                 await _unitOfWork.CommitTransaction();
+
+                await _cacheHandler.Remove(CachePrefix.UserTaskList, user.Id!.ToString()!);
+                await _cacheHandler.Remove(CachePrefix.UserTask, $"{user.Id!}_{taskId}");
+
+                return string.Empty;
             }
             catch(Exception ex)
             {
@@ -115,11 +112,6 @@ namespace Task_Tracker_WebApp.Use_Cases.Tasks
                                     where id is {taskId}");
                 return "An error occurred during Task deletion";
             }
-
-            _cacheHandler.Remove(CachePrefix.UserTaskList, user.Id!.ToString()!);
-            _cacheHandler.Remove(CachePrefix.UserTask, $"{user.Id!}_{taskId}");
-
-            return string.Empty;
         }
     }
 }

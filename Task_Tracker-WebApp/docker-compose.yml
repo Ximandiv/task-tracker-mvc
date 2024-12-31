@@ -12,12 +12,26 @@ services:
       - JwtSettings__Audience=${JWTSETTINGS__AUDIENCE}  # Inject JWT Audience
       - JwtSettings__ExpirationInMinutes=${JWTSETTINGS__EXPIRATIONINMINUTES}  # Inject JWT ExpirationInMinutes
       - JwtSettings__RememberExpInMonths=${JWTSETTINGS__REMEMBEREXPINMONTHS}  # Inject JWT RememberExpInMonths
-      - ConnectionStrings__Test=${CONNECTIONSTRINGS__TEST}  # Inject Connection String
-      - CacheSettings__SlidingTimeInMinutes=${CACHESETTINGS__SLIDINGTIMEINMINUTES}  # Inject Cache SlidingTime
-      - CacheSettings__AbsoluteTimeInHours=${CACHESETTINGS__ABSOLUTETIMEINHOURS}  # Inject Cache AbsoluteTime
+      - ConnectionStrings__Test=${CONNECTIONSTRINGS__TEST}  # Inject DB Connection String
+      - CacheSettings__ConnectionString=${CONNECTIONSTRINGS__CACHE}  # Inject Redis Connection String
+      - CacheSettings__ExpirationTimeInMinutes=${CACHESETTINGS__EXPIRATIONTIMEINMINUTES}  # Inject Cache Expiration Time
+    volumes:
+      - ./DataProtection-Keys:/root/.aspnet/data-protection-keys
     depends_on:
         mydb:
             condition: service_healthy
+  cache:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+        - "6380:6379"
+    volumes:
+        - redis_volume_data:/data
+    environment:
+      - REDIS_PASSWORD=${CACHESETTINGS__PASSWORD}
+    command:
+        ["redis-server", "--requirepass", "${CACHESETTINGS__PASSWORD}"]
 
   mydb:
     image: mysql:8.0  # MySQL Docker image
@@ -39,3 +53,4 @@ services:
 
 volumes:
   mysql-data:
+  redis_volume_data:

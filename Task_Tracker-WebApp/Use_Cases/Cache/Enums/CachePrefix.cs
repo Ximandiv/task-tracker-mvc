@@ -2,7 +2,9 @@
 {
     public enum CachePrefix
     {
+        User,
         UserTaskList,
-        UserTask
+        UserTask,
+        RememberToken
     }
 }

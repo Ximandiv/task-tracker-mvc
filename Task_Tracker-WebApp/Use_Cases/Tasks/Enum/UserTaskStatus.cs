@@ -2,6 +2,7 @@
 {
     public enum UserTaskStatus
     {
+        Unknown = 0,
         ToDo = 1,
         InProgress = 2,
         Complete = 3
