@@ -1,7 +1,7 @@
 services:
   # ASP.NET application container
   webapp:
-    image: task_tracker_webapp # The name of your app's image
+    image: task_tracker_webapp:latest # The name of your app's image
     build: .
     ports:
       - "5283:8080"  # Expose the app's port

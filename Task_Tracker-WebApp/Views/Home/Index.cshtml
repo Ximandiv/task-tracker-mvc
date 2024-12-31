@@ -3,8 +3,68 @@
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome to Task Tracker or TTR!</h1>
-    <p>Here, you can create your personal tasks and track them in real time!</p>
+    <header class="text-center mb-5">
+        <h1 class="display-4 fw-bold text-light">Task Tracker</h1>
+        <p class="lead">Track, manage, and organize your tasks efficiently. Say goodbye to chaos and hello to productivity!</p>
+        <a asp-controller="Auth" asp-action="SignIn" class="btn btn-lg btn-primary">Get Started</a>
+    </header>
+
+    <!-- Features Section -->
+    <section id="features" class="mb-5">
+        <h2 class="h3 text-center mb-4">Why Choose Task Tracker?</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card bg-secondary text-light border-light">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Track Your Tasks</h5>
+                        <p class="card-text">Easily add, edit, and delete tasks in a simple and intuitive interface.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-secondary text-light border-light">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Filter & Organize</h5>
+                        <p class="card-text">Filter tasks by status, priority, or category for better organization.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-secondary text-light border-light">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Stay on Top</h5>
+                        <p class="card-text">View tasks in a paginated list to avoid clutter and keep focus.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="mb-5">
+        <h2 class="h3 text-center mb-4">How It Works</h2>
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <img src="~/img/demo-ttr.png" alt="Task Management" class="img-fluid rounded">
+            </div>
+            <div class="col-md-6">
+                <p class="lead">Task Tracker is designed to make your life easier:</p>
+                <ul class="list-group list-group-flush bg-dark">
+                    <li class="list-group-item bg-dark text-light">1. Add tasks with just a click.</li>
+                    <li class="list-group-item bg-dark text-light">2. Edit or update tasks effortlessly.</li>
+                    <li class="list-group-item bg-dark text-light">3. Filter tasks to find exactly what you need.</li>
+                    <li class="list-group-item bg-dark text-light">4. Delete tasks once they're done.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action Section -->
+    <section id="get-started" class="text-center py-5 bg-secondary text-light rounded">
+        <h2 class="h3">Ready to Get Started?</h2>
+        <p class="mb-4">Sign up now and start tracking your tasks like a pro.</p>
+        <a asp-controller="Auth" asp-action="SignIn" class="btn btn-success btn-lg">Sign Up</a>
+    </section>
 
     @if(ViewData["AuthError"] != null)
     {

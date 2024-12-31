@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Task_Tracker_WebApp.Extension_Methods;
 using Task_Tracker_WebApp.Middleware;
 
